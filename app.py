@@ -63,6 +63,22 @@ def logout():
 
 
 
+
+@app.route('/training/putt/<mode>')
+@login_required
+def training_putt(mode):
+    # zde podle mode vykreslíš různé typy tréninku
+    return render_template('putt_training.html', mode=mode)
+
+@app.route('/training/drive')
+@login_required
+def training_drive():
+    return render_template('drive_training.html')
+
+
+
+
+
 if __name__ == '__main__':
     app.run(debug=True)
 
