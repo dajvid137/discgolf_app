@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5 text-center">
+    <div class="card text-center shadow-sm p-3 mb-3">
+        <h2 class="card-title">Score: {{ Hscore }}</h2>
+        <h4 class="card-subtitle mb-2 text-muted">Round: {{ Hround }}/10</h4>
+        <h5 class="card-text">Distance: {{ Hdistance }}m</h5>
+    </div>
+
+    
+
+    <form method="POST" action="{{ url_for('training_putt', mode='jyly') }}">
+    <div class="container text-center">
+
+        <!-- Řádek 0 -->
+        <div class="row mb-2 justify-content-center">
+            <div class="col-12 col-sm-6 col-md-4">
+                <button type="submit" name="0" class="btn btn-outline-primary btn-lg w-100 mb-2">0</button>
+            </div>
+        </div>
+
+        <!-- Řádek 1 a 2 -->
+        <div class="row mb-2 justify-content-center">
+            <div class="col-6 col-sm-3 col-md-2">
+                <button type="submit" name="1" class="btn btn-outline-primary btn-lg w-100 mb-2">1</button>
+            </div>
+            <div class="col-6 col-sm-3 col-md-2">
+                <button type="submit" name="2" class="btn btn-outline-primary btn-lg w-100 mb-2">2</button>
+            </div>
+        </div>
+
+        <!-- Řádek 3 a 4 -->
+        <div class="row mb-2 justify-content-center">
+            <div class="col-6 col-sm-3 col-md-2">
+                <button type="submit" name="3" class="btn btn-outline-primary btn-lg w-100 mb-2">3</button>
+            </div>
+            <div class="col-6 col-sm-3 col-md-2">
+                <button type="submit" name="4" class="btn btn-outline-primary btn-lg w-100 mb-2">4</button>
+            </div>
+        </div>
+
+        <!-- Řádek 5 -->
+        <div class="row mb-4 justify-content-center">
+            <div class="col-12 col-sm-6 col-md-4">
+                <button type="submit" name="5" class="btn btn-outline-primary btn-lg w-100 mb-2">5</button>
+            </div>
+        </div>
+
+        <!-- Back a Reset -->
+        <div class="row justify-content-center">
+            <div class="col-6 col-sm-3 col-md-2">
+                <button type="submit" name="back" class="btn btn-secondary w-100 mb-2">Back</button>
+            </div>
+            <div class="col-6 col-sm-3 col-md-2">
+                <button type="submit" name="resBtn" class="btn btn-secondary w-100 mb-2">Reset</button>
+            </div>
+        </div>
+
+    </div>
+</form>
+
+</div>
+{% endblock %}

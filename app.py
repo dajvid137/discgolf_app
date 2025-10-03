@@ -9,6 +9,11 @@ app.config['SECRET_KEY'] = 'tajny_klic'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///discgolf.db'
 db.init_app(app)
 
+score = 0
+round = 0
+distance = 0
+
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -64,17 +69,95 @@ def logout():
 
 
 
-@app.route('/training/putt/<mode>')
+@app.route('/training')
+@login_required
+def training():
+    return render_template('training.html')
+
+@app.route('/training/putt/<mode>', methods=['GET','POST'])
 @login_required
 def training_putt(mode):
-    # zde podle mode vykreslíš různé typy tréninku
-    return render_template('putt_training.html', mode=mode)
+    if mode == 'jyly':
+        template = 'jyly.html'
+
+        # první načtení stránky → inicializace proměnných
+        if request.method == "GET":
+            session['score'] = 0
+            session['round'] = 0
+            session['distance'] = 10
+            return render_template(
+                f'putt/{template}', 
+                mode=mode, 
+                Hscore=session['score'], 
+                Hround=session['round'], 
+                Hdistance=session['distance']
+            )
+
+        # zpracování POST (klik na tlačítko)
+        if request.method == "POST":
+            score = session.get('score', 0)
+            round_ = session.get('round', 0)
+            distance = session.get('distance', 10)
+
+            if '0' in request.form:
+                score = score
+                distance = 5
+            elif '1' in request.form:
+                score += 1 * distance
+                distance = 6
+            elif '2' in request.form:
+                score += 2 * distance
+                distance = 7
+            elif '3' in request.form:
+                score += 3 * distance
+                distance = 8
+            elif '4' in request.form:
+                score += 4 * distance
+                distance = 9
+            elif '5' in request.form:
+                score += 5 * distance
+                distance = 10
+            else:
+                score = score
+
+            round_ += 1
+
+            # uložení zpět do session
+            session['score'] = score
+            session['round'] = round_
+            session['distance'] = distance
+
+            # pokud je konec hry (např. 10 kol)
+            if round_ >= 10:
+                return render_template("putt/game_over.html", final_score=score)
+
+            return render_template(
+                f'putt/{template}', 
+                mode=mode, 
+                Hscore=score, 
+                Hround=round_, 
+                Hdistance=distance
+            )
+
+    elif mode == 'puttovacka':
+        template = 'puttovacka.html'
+        # specifická logika pro Puttovačku
+
+    elif mode == 'random':
+        template = 'random.html'
+        # specifická logika pro Random
+
+    else:
+        return "Neznámý režim", 404
+
+    return render_template(f'putt/{template}', mode=mode)
+
 
 @app.route('/training/drive')
 @login_required
 def training_drive():
+    # formulář pro drivy
     return render_template('drive_training.html')
-
 
 
 
