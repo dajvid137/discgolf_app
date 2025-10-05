@@ -14,13 +14,12 @@ class User(db.Model, UserMixin):
 class PuttSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, nullable=False)
-    attempts = db.Column(db.Integer, nullable=False)
-    success = db.Column(db.Integer, nullable=False)
+    score = db.Column(db.Integer, nullable=False)
+    mode = db.Column(db.String(50), nullable=False) 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 class DriveSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, nullable=False)
     distance = db.Column(db.Float, nullable=False)
-    accuracy = db.Column(db.Float, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
