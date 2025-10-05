@@ -2,7 +2,7 @@
 from flask import Flask, render_template, redirect, url_for, request, session, flash
 from models import db, User, PuttSession, DriveSession
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy import desc, func
 import random
 
@@ -77,11 +77,65 @@ def logout():
 @app.route('/profile')
 @login_required
 def profile():
-    # Načtení všech puttovacích sessions pro aktuálně přihlášeného uživatele.
-    putt_sessions = PuttSession.query.filter_by(user_id=current_user.id).order_by(desc(PuttSession.date)).all()
+    # 1. Čtení parametrů z URL (filtru)
+    # Získáváme hodnoty filtrů z URL (request.args). 
+    # Pokud nejsou nastaveny, použijeme výchozí hodnoty.
+    mode_filter = request.args.get('mode_filter', '')  # '' = Všechny režimy
+    period_filter = request.args.get('period_filter', 'all') # 'all' = Celá historie
     
-    # KLÍČOVÁ OPRAVA: Jméno šablony musí být 'profile.html'
-    return render_template('profile.html', putt_sessions=putt_sessions)
+    # Začneme s dotazem na sessions aktuálního uživatele
+    query = PuttSession.query.filter_by(user_id=current_user.id)
+    
+    # 2. Aplikace filtru podle Režimu Hry (mode)
+    if mode_filter:
+        query = query.filter(PuttSession.mode == mode_filter)
+        
+    # 3. Aplikace filtru podle Časového Období (period)
+    start_date = None
+    if period_filter == '7':
+        # Filtrace za posledních 7 dní
+        start_date = datetime.now() - timedelta(days=7)
+    elif period_filter == '30':
+        # Filtrace za posledních 30 dní
+        start_date = datetime.now() - timedelta(days=30)
+        
+    if start_date:
+        # Filtrujeme sessions, které jsou novější než start_date
+        query = query.filter(PuttSession.date >= start_date) 
+        
+    # 4. Získání dat pro Tabulku Historie
+    # Pro tabulku chceme data seřazená od nejnovějšího
+    putt_sessions = query.order_by(desc(PuttSession.date)).all()
+
+    # 5. Příprava dat pro Graf (Trend skóre)
+    
+    # Pro graf musíme data seřadit chronologicky (od nejstaršího)
+    sessions_for_chart = query.order_by(PuttSession.date).all()
+    
+    chart_labels = [] # Datumy pro osu X
+    chart_scores = [] # Skóre pro osu Y
+    
+    for session in sessions_for_chart:
+        # Zkrácený formát data pro graf
+        chart_labels.append(session.date.strftime('%d.%m.')) 
+        chart_scores.append(session.score)
+        
+    chart_data = {
+        'labels': chart_labels,
+        'scores': chart_scores
+    }
+
+    # 6. Renderování šablony
+    return render_template(
+        'profile.html', 
+        putt_sessions=putt_sessions,
+        chart_data=chart_data,
+        
+        # Tyto parametry jsou klíčové, aby po odeslání formuláře
+        # zůstaly vybrané správné hodnoty ve filtrech v HTML.
+        selected_mode=mode_filter, 
+        selected_period=period_filter
+    )
 
 # Seznamy dostupných ID (seeds) pro stabilní avatary
 # Používáme čísla z vaší struktury: static/images/avatar/male/ID.png
@@ -143,6 +197,7 @@ def profile_settings():
         male_avatars=male_avatars, 
         female_avatars=female_avatars
     )
+
 
 
 @app.route('/training')

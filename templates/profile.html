@@ -33,6 +33,103 @@
 
         <h2 class="mb-3">Historie puttování</h2>
         
+        {#
+        NOVÁ SEKCE PRO GRAF A FILTRY ZDE
+        ----------------------------------
+        #}
+        
+        <div class="card shadow-sm mb-4 p-4">
+            <!-- <h4 class="mb-3">Analýza a filtry</h4> -->
+
+            {# Místo pro GRAF (vyžaduje Chart.js) #}
+            {# Pro zobrazení grafu musíte do šablony předat data a připojit Chart.js #}
+            <!-- <h5 class="mb-3">Vývoj skóre v čase 📈</h5> -->
+            <canvas id="scoreTrendChart" style="max-height: 250px;"></canvas>
+            
+            {# ZDE PŘICHÁZÍ NOVÁ, ROBUSTNĚJŠÍ VERZE JS KÓDU #}
+            <script>
+                // Spustí kód až PO plném načtení DOM (včetně canvasu)
+                document.addEventListener('DOMContentLoaded', function() {
+                    
+                    // 1. Bezpečné načtení dat
+                    // Předpokládá se, že 'chart_data' je předáno z Flasku (app.py)
+                    const chartDataRaw = '{{ chart_data | tojson | safe }}';
+                    
+                    if (chartDataRaw === '{}' || !chartDataRaw) {
+                        console.log("Žádná data pro vykreslení grafu.");
+                        return;
+                    }
+                    
+                    const chartData = JSON.parse(chartDataRaw);
+
+                    // 2. Vykreslení grafu
+                    const ctx = document.getElementById('scoreTrendChart');
+                    
+                    // Bezpečnostní kontrola, zda bylo nalezeno plátno (canvas)
+                    if (!ctx) {
+                        console.error("Chyba: Element s ID 'scoreTrendChart' nebyl nalezen.");
+                        return;
+                    }
+
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: chartData.labels,
+                            datasets: [{
+                                label: 'Skóre za session',
+                                data: chartData.scores,
+                                borderColor: 'rgba(0, 123, 255, 1)',
+                                backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                                fill: true,
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            }
+                        }
+                    });
+                }); // Konec posluchače DOMContentLoaded
+            </script>
+            {# KONEC JS KÓDU #}
+
+
+            <hr class="my-4">
+
+            {# FORMULÁŘ PRO FILTROVÁNÍ (GET) #}
+            <form method="GET" action="{{ url_for('profile') }}" class="d-flex flex-wrap align-items-center gap-3">
+                
+                <label for="mode_filter" class="form-label mb-0">Režim:</label>
+                <select name="mode_filter" id="mode_filter" class="form-select w-auto">
+                    <option value="">Všechny</option>
+                    <option value="jyly" {% if request.args.get('mode_filter') == 'jyly' %}selected{% endif %}>Jyly</option>
+                    <option value="puttovacka" {% if request.args.get('mode_filter') == 'puttovacka' %}selected{% endif %}>Puttovačka</option>
+                    <option value="random" {% if request.args.get('mode_filter') == 'random' %}selected{% endif %}>Náhodné vzdálenosti</option>
+                </select>
+                
+                <label for="period_filter" class="form-label mb-0">Období:</label>
+                <select name="period_filter" id="period_filter" class="form-select w-auto">
+                    <option value="all">Celá historie</option>
+                    <option value="30" {% if request.args.get('period_filter') == '30' %}selected{% endif %}>Posledních 30 dní</option>
+                    <option value="7" {% if request.args.get('period_filter') == '7' %}selected{% endif %}>Posledních 7 dní</option>
+                </select>
+                
+                <button type="submit" class="btn btn-sm btn-primary">Filtrovat</button>
+            </form>
+        </div>
+        
+        {# ---------------------------------- #}
+        
         {% if putt_sessions %}
             <div class="table-responsive">
                 <table class="table table-striped table-hover shadow-sm rounded">
