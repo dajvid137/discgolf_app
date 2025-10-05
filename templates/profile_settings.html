@@ -1,3 +1,4 @@
+{# templates/profile_settings.html #}
 {% extends "base.html" %}
 
 {% block content %}
@@ -5,27 +6,30 @@
     <div class="col-md-8 offset-md-2">
         <h2 class="mb-4">Nastavení Avatara</h2>
         <p class="text-info">
-            Nabídka avatarů se **mění s každým obnovením stránky**, ale váš **vybraný avatar se uloží** a bude vždy zobrazen na stránce profilu!
+            Každým načtením stránky se nabídka mění!
         </p>
 
         <div class="card p-4 shadow-sm">
             <form method="POST" action="{{ url_for('profile_settings') }}">
     
-                {% set selected_avatar = current_user.profile_image_url or 'male_1' %}
+                {# Nastavíme defaultní URL pro kontrolu 'checked', např. na prvního mužského avatara #}
+                {% set default_url = url_for('static', filename='images/avatar/male/12.png') %}
+                {% set selected_avatar_url = current_user.profile_image_url or default_url %}
 
+                <h5 class="mb-3 mt-3">Muži ({{ male_avatars|length }} náhodných):</h5>
                 <div class="row g-3">
-                    {% for i in range(1, 6) %} {# Zobrazíme VŠECH 5 mužských avatarů #}
-                        {% set avatar_id = 'male_' ~ i %}
-                        {# KLÍČOVÁ OPRAVA: Použijte stabilní URL pro generování na základě ID #}
-                        {% set avatar_url = 'https://avatar.iran.liara.run/public/boy?id=' ~ i %} 
+                    {# Cyklíme přes předaná data z app.py #}
+                    {% for avatar in male_avatars %}
+                        {% set avatar_url = avatar.url %}
                         <div class="col-4 col-sm-2 text-center">
                             <label class="d-block cursor-pointer">
-                                <input type="radio" name="avatar_id" value="{{ avatar_id }}" 
-                                    {% if avatar_id == selected_avatar %}checked{% endif %}
+                                
+                                <input type="radio" name="avatar_url" value="{{ avatar_url }}" 
+                                    {% if avatar_url == selected_avatar_url %}checked{% endif %}
                                     class="d-none" required>
                                 
                                 <img src="{{ avatar_url }}" 
-                                    alt="Avatar {{ avatar_id }}" 
+                                    alt="Avatar {{ avatar.id }}" 
                                     class="rounded-circle border border-2 p-1" 
                                     style="width: 80px; height: 80px; object-fit: cover;">
                             </label>
@@ -33,25 +37,38 @@
                     {% endfor %}
                 </div>
 
-                <div class="row g-3 mt-3">
-                    {% for i in range(1, 6) %} {# Zobrazíme VŠECH 5 ženských avatarů #}
-                        {% set avatar_id = 'female_' ~ i %}
-                        {# KLÍČOVÁ OPRAVA: Použijte stabilní URL pro generování na základě ID #}
-                        {% set avatar_url = 'https://avatar.iran.liara.run/public/girl?id=' ~ i %}
+                <h5 class="mb-3 mt-4">Ženy ({{ female_avatars|length }} náhodných):</h5>
+                <div class="row g-3">
+                    {# Cyklíme přes předaná data z app.py #}
+                    {% for avatar in female_avatars %}
+                        {% set avatar_url = avatar.url %}
                         <div class="col-4 col-sm-2 text-center">
                             <label class="d-block cursor-pointer">
-                                <input type="radio" name="avatar_id" value="{{ avatar_id }}" 
-                                    {% if avatar_id == selected_avatar %}checked{% endif %}
+                                
+                                <input type="radio" name="avatar_url" value="{{ avatar_url }}" 
+                                    {% if avatar_url == selected_avatar_url %}checked{% endif %}
                                     class="d-none" required>
                                 
                                 <img src="{{ avatar_url }}" 
-                                    alt="Avatar {{ avatar_id }}" 
+                                    alt="Avatar {{ avatar.id }}" 
                                     class="rounded-circle border border-2 p-1" 
                                     style="width: 80px; height: 80px; object-fit: cover;">
                             </label>
                         </div>
                     {% endfor %}
                 </div>
+
+                <style>
+                    /* Stylování pro zvýraznění vybraného avatara */
+                    input[type="radio"]:checked + img {
+                        border-color: var(--bs-primary) !important; /* Použije modrou barvu Bootstrapu */
+                        border-width: 5px !important;              /* Zesílí okraj */
+                        box-shadow: 0 0 10px rgba(0, 123, 255, 0.5); /* Přidá stín */
+                    }
+                    .cursor-pointer {
+                        cursor: pointer;
+                    }
+                </style>
 
                 <button type="submit" class="btn btn-primary mt-4">Uložit výběr avatara</button>
             </form>

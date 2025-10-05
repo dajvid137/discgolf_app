@@ -3,8 +3,8 @@ from flask import Flask, render_template, redirect, url_for, request, session, f
 from models import db, User, PuttSession, DriveSession
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from datetime import datetime
-from sqlalchemy import desc
-# import hashlib
+from sqlalchemy import desc, func
+import random
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'tajny_klic'
@@ -83,24 +83,66 @@ def profile():
     # KLÍČOVÁ OPRAVA: Jméno šablony musí být 'profile.html'
     return render_template('profile.html', putt_sessions=putt_sessions)
 
+# Seznamy dostupných ID (seeds) pro stabilní avatary
+# Používáme čísla z vaší struktury: static/images/avatar/male/ID.png
+MALE_AVATAR_IDS = [12, 15, 17, 19, 32, 40, 41, 42, 45, 46]
+# static/images/avatar/female/ID.png
+FEMALE_AVATAR_IDS = [63, 64, 73, 76, 82, 83, 85, 86, 94, 95]
+
 @app.route('/profile_settings', methods=['GET', 'POST'])
 @login_required
 def profile_settings():
+    
+    # ------------------ LOGIKA POST (UKLÁDÁNÍ) ------------------
     if request.method == 'POST':
-        selected_avatar = request.form.get('avatar_id')
-
-        # Vytvoříme si seznam všech platných avatarů pro validaci
-        valid_avatars = [f'male_{i}' for i in range(1, 6)] + [f'female_{i}' for i in range(1, 6)]
-
-        if selected_avatar and selected_avatar in valid_avatars:
-            current_user.profile_image_url = selected_avatar # Uložíme identifikátor, např. "female_2"
+        # V POSTU se očekává URL ve tvaru: /static/images/avatar/gender/ID.png
+        selected_avatar_url = request.form.get('avatar_url') 
+        
+        # Sestavíme platné prefixy pro robustní validaci
+        male_prefix = url_for('static', filename='images/avatar/male/', _external=False)
+        female_prefix = url_for('static', filename='images/avatar/female/', _external=False)
+        
+        # Validace: URL musí začínat jednou ze správných cest a končit .png
+        if selected_avatar_url and selected_avatar_url.endswith('.png') and \
+           (selected_avatar_url.startswith(male_prefix) or selected_avatar_url.startswith(female_prefix)):
+            
+            current_user.profile_image_url = selected_avatar_url 
             db.session.commit()
             flash('Avatar byl úspěšně uložen!', 'success')
             return redirect(url_for('profile'))
         else:
-            flash('Neplatný výběr avatara.', 'danger')
-            
-    return render_template('profile_settings.html')
+            flash('Neplatný výběr avatara. Zkuste to znovu.', 'danger')
+
+    # ------------------ LOGIKA GET (ZOBRAZENÍ) ------------------
+    
+    num_avatars_to_show = 3
+    
+    # Náhodně vybereme ID
+    selected_male_ids = random.sample(MALE_AVATAR_IDS, num_avatars_to_show)
+    selected_female_ids = random.sample(FEMALE_AVATAR_IDS, num_avatars_to_show)
+
+    # 1. Vytvoření seznamu pro muže
+    male_avatars = []
+    for avatar_id in selected_male_ids:
+        # Vytvoření cesty: static/images/avatar/male/ID.png
+        filename = f'images/avatar/male/{avatar_id}.png'
+        url = url_for('static', filename=filename) # Flask převede na /static/images/avatar/male/ID.png
+        male_avatars.append({'id': avatar_id, 'url': url})
+        
+    # 2. Vytvoření seznamu pro ženy
+    female_avatars = []
+    for avatar_id in selected_female_ids:
+        # Vytvoření cesty: static/images/avatar/female/ID.png
+        filename = f'images/avatar/female/{avatar_id}.png'
+        url = url_for('static', filename=filename)
+        female_avatars.append({'id': avatar_id, 'url': url})
+        
+    # Odešleme data do šablony
+    return render_template(
+        'profile_settings.html', 
+        male_avatars=male_avatars, 
+        female_avatars=female_avatars
+    )
 
 
 @app.route('/training')
