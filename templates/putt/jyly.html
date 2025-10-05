@@ -1,6 +1,30 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+    /* Styly pro vizuální odezvu při stisknutí (Mobile :active) */
+    .score-btn:active {
+        /* Přechod na pevnou barvu při stisknutí */
+        background-color: #10B981; /* Pevná barva místo outline */
+        color: white; 
+        
+        /* Krátký a viditelný efekt "potopení" */
+        transform: translateY(3px); /* Posun dolů, jako by se tlačítko stlačilo */
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* Stín se zmenší */
+        
+        /* Velmi rychlá animace pro okamžitou odezvu */
+        transition: all 0.05s ease-out; 
+        
+        /* Zrušíme rámeček pro outline tlačítka, aby to vypadalo jako solidní stisk */
+        border: none;
+    }
+    
+    /* Přechod pro hladký efekt (mírně pomalejší než aktivní stav) */
+    .score-btn {
+        transition: all 0.1s ease-in-out;
+    }
+</style>
+
 <div class="container mt-5 text-center">
     <div class="card text-center shadow-sm p-3 mb-3">
         <h2 class="card-title">Skóre: {{ Hscore }}</h2>
@@ -8,7 +32,20 @@
         <h5 class="card-text">Vzdálenost: {{ Hdistance }}m</h5>
     </div>
 
-    
+    <div class="container mt-4 mb-4">
+        <h4>Zbývá hodů: {{ 50 - current_throw_count }}</h4> 
+        
+        <div class="progress" style="height: 20px;">
+            <div class="progress-bar bg-success" role="progressbar" 
+                style="{{ progress_style_attr }}" 
+                aria-valuenow="{{ progress_percentage|int }}" 
+                aria-valuemin="0" 
+                aria-valuemax="100">
+                {{ "%.0f"|format(progress_percentage) }}%
+            </div>
+        </div>
+    </div>
+
 
     <form method="POST" action="{{ url_for('training_putt', mode='jyly') }}">
     <div class="container text-center">
@@ -16,46 +53,46 @@
         <!-- Řádek 0 -->
         <div class="row mb-2 justify-content-center">
             <div class="col-12 col-sm-6 col-md-4">
-                <button type="submit" name="0" class="btn btn-outline-primary btn-lg w-100 mb-2">0</button>
+                <button type="submit" name="0" class="score-btn btn btn-outline-primary btn-lg w-100 mb-2">0</button>
             </div>
         </div>
 
         <!-- Řádek 1 a 2 -->
         <div class="row mb-2 justify-content-center">
             <div class="col-6 col-sm-3 col-md-2">
-                <button type="submit" name="1" class="btn btn-outline-primary btn-lg w-100 mb-2">1</button>
+                <button type="submit" name="1" class="score-btn btn btn-outline-primary btn-lg w-100 mb-2">1</button>
             </div>
             <div class="col-6 col-sm-3 col-md-2">
-                <button type="submit" name="2" class="btn btn-outline-primary btn-lg w-100 mb-2">2</button>
+                <button type="submit" name="2" class="score-btn btn btn-outline-primary btn-lg w-100 mb-2">2</button>
             </div>
         </div>
 
         <!-- Řádek 3 a 4 -->
         <div class="row mb-2 justify-content-center">
             <div class="col-6 col-sm-3 col-md-2">
-                <button type="submit" name="3" class="btn btn-outline-primary btn-lg w-100 mb-2">3</button>
+                <button type="submit" name="3" class="score-btn btn btn-outline-primary btn-lg w-100 mb-2">3</button>
             </div>
             <div class="col-6 col-sm-3 col-md-2">
-                <button type="submit" name="4" class="btn btn-outline-primary btn-lg w-100 mb-2">4</button>
+                <button type="submit" name="4" class="score-btn btn btn-outline-primary btn-lg w-100 mb-2">4</button>
             </div>
         </div>
 
         <!-- Řádek 5 -->
         <div class="row mb-4 justify-content-center">
             <div class="col-12 col-sm-6 col-md-4">
-                <button type="submit" name="5" class="btn btn-outline-primary btn-lg w-100 mb-2">5</button>
+                <button type="submit" name="5" class="score-btn btn btn-outline-primary btn-lg w-100 mb-2">5</button>
             </div>
         </div>
 
         <!-- Back a Reset -->
         <div class="row justify-content-center">
             <div class="col-6 col-sm-3 col-md-2">
-                <button type="submit" name="back" class="btn btn-secondary w-100 mb-2">Back</button>
+                <button type="submit" name="back" class="score-btn btn btn-secondary w-100 mb-2">Smazat</button>
             </div>
             <div class="col-6 col-sm-3 col-md-2">
-                <button type="submit" name="resBtn" class="btn btn-secondary w-100 mb-2" 
+                <button type="submit" name="resBtn" class="score-btn btn btn-secondary w-100 mb-2" 
                         onclick="return confirm('Opravdu chcete restartovat hru?');">
-                    Reset
+                    Resetovat
                 </button>
             </div>
         </div>

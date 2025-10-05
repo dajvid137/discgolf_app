@@ -227,12 +227,15 @@ def training_putt(mode):
             session['prev_round'] = 1
         if 'prev_distance' not in session:
             session['prev_distance'] = 10
+        if 'jyly_throw_count' not in session:
+            session['jyly_throw_count'] = 0
         
 
         if request.method == "POST":
             score = session.get('score', 0)
             round_ = session.get('round', 1)
             distance = session.get('distance', 10)
+            throw_count = session.get('jyly_throw_count', 0)
 
             # --- 1. Zpracování speciálních tlačítek (Back/Reset) ---
             
@@ -241,11 +244,13 @@ def training_putt(mode):
                 session['score'] = session.get('prev_score', 0)
                 session['round'] = session.get('prev_round', 1)
                 session['distance'] = session.get('prev_distance', 10)
+                session['jyly_throw_count'] = session.get('prev_throw_count', 0)
                 
                 # Pro jistotu, aby se nešlo dvakrát zpět
                 session['prev_score'] = 0 
                 session['prev_round'] = 1
                 session['prev_distance'] = 10
+                session['prev_throw_count'] = 0
                 
                 return redirect(url_for('training_putt', mode='jyly'))
             
@@ -254,9 +259,11 @@ def training_putt(mode):
                 session['score'] = 0
                 session['round'] = 1
                 session['distance'] = 10
+                session['jyly_throw_count'] = 0
                 session['prev_score'] = 0 
                 session['prev_round'] = 1
                 session['prev_distance'] = 10
+                session['prev_throw_count'] = 0
                 return redirect(url_for('training_putt', mode='jyly'))
                 
             # --- 2. Uložení aktuálního stavu jako "Předchozí" pro další krok ---
@@ -264,6 +271,7 @@ def training_putt(mode):
             session['prev_score'] = score
             session['prev_round'] = round_
             session['prev_distance'] = distance
+            session['prev_throw_count'] = throw_count
 
             # --- 3. Zpracování skóre a výpočet nového stavu ---
 
@@ -272,26 +280,35 @@ def training_putt(mode):
             # zpracování tlačítka
             if '0' in request.form:
                 distance = 5
+                # session['jyly_throw_count'] += 5
             elif '1' in request.form:
                 score += 1 * distance
                 distance = 6
+                # session['jyly_throw_count'] += 5
             elif '2' in request.form:
                 score += 2 * distance
                 distance = 7
+                # session['jyly_throw_count'] += 5
             elif '3' in request.form:
                 score += 3 * distance
                 distance = 8
+                # session['jyly_throw_count'] += 5
             elif '4' in request.form:
                 score += 4 * distance
                 distance = 9
+                # session['jyly_throw_count'] += 5
             elif '5' in request.form:
                 score += 5 * distance
-                distance = 10                
+                distance = 10
+                # session['jyly_throw_count'] += 5                
             # elif 'resBtn' in request.form:
             #     score += 5 * distance
             #     distance = 10
 
-            round_ += 1
+            # round_ += 1
+            if any(key in request.form for key in ['0', '1', '2', '3', '4', '5']):
+                round_ += 1
+                session['jyly_throw_count'] += 5
 
             # pokud je konec hry
             if round_ >= 11:
@@ -299,23 +316,35 @@ def training_putt(mode):
                 session['score'] = 0
                 session['round'] = 1
                 session['distance'] = 10
+                session['jyly_throw_count'] = 0
                 return redirect(url_for('game_over'))
 
             # uložení aktuálního stavu do session
             session['score'] = score
             session['round'] = round_
             session['distance'] = distance
+            # session['jyly_throw_count'] = throw_count
 
             # redirect po POSTu → zabrání duplicitnímu přičtení skóre při refresh
             return redirect(url_for('training_putt', mode='jyly'))
 
-        # GET – jen zobrazíme stav hry
+        TOTAL_THROWS = 50
+
+        current_throw_count = session.get('jyly_throw_count', 0)
+        progress_percentage = (current_throw_count / TOTAL_THROWS) * 100 if TOTAL_THROWS > 0 else 0
+        progress_style_attr = f"width: {int(progress_percentage)}%;"
+        
         return render_template(
-            f'putt/{template}',
+            f'putt/{template}', # <--- UŽIVATEL POUŽÍVAL f'putt/{template}', ZKONTROLUJTE CESTU!
             mode=mode,
             Hscore=session.get('score', 0),
             Hround=session.get('round', 1),
-            Hdistance=session.get('distance', 10)
+            Hdistance=session.get('distance', 10),
+            
+            # PROMĚNNÉ PRO PROGRESS BAR
+            current_throw_count=current_throw_count, 
+            progress_percentage=progress_percentage,
+            progress_style_attr=progress_style_attr
         )
 
     elif mode == 'puttovacka':
