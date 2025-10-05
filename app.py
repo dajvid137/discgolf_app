@@ -4,11 +4,18 @@ from models import db, User, PuttSession, DriveSession
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from datetime import datetime
 from sqlalchemy import desc
+# import hashlib
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'tajny_klic'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///discgolf.db'
 db.init_app(app)
+
+# def md5_filter(s):
+#     """Vrací MD5 hash řetězce, potřebný pro Gravatar."""
+#     return hashlib.md5(s.encode('utf-8')).hexdigest()
+
+# app.jinja_env.filters['md5'] = md5_filter # <-- REGISTRACE FILTRU
 
 score = 0
 round = 0
@@ -71,31 +78,30 @@ def logout():
 @login_required
 def profile():
     # Načtení všech puttovacích sessions pro aktuálně přihlášeného uživatele.
-    # Řadíme podle data od nejnovějšího (desc).
     putt_sessions = PuttSession.query.filter_by(user_id=current_user.id).order_by(desc(PuttSession.date)).all()
     
-    return render_template('profil.html', putt_sessions=putt_sessions)
+    # KLÍČOVÁ OPRAVA: Jméno šablony musí být 'profile.html'
+    return render_template('profile.html', putt_sessions=putt_sessions)
 
-@app.route('/profile/settings', methods=['GET', 'POST'])
+@app.route('/profile_settings', methods=['GET', 'POST'])
 @login_required
 def profile_settings():
-    error = None
     if request.method == 'POST':
-        # Získání URL z formuláře
-        image_url = request.form.get('profile_image_url', '').strip()
-        
-        # Jednoduchá validace
-        if not image_url.startswith('http') and image_url != "":
-            error = "Neplatný formát URL. Musí začínat http:// nebo https://, nebo být ponecháno prázdné."
-        else:
-            # Uložení nové URL do databáze
-            current_user.profile_image_url = image_url
+        selected_avatar = request.form.get('avatar_id')
+
+        # Vytvoříme si seznam všech platných avatarů pro validaci
+        valid_avatars = [f'male_{i}' for i in range(1, 6)] + [f'female_{i}' for i in range(1, 6)]
+
+        if selected_avatar and selected_avatar in valid_avatars:
+            current_user.profile_image_url = selected_avatar # Uložíme identifikátor, např. "female_2"
             db.session.commit()
-            # Zobrazení zprávy o úspěchu (vyžaduje flash)
-            flash('Profilová fotka byla úspěšně aktualizována!', 'success')
+            flash('Avatar byl úspěšně uložen!', 'success')
             return redirect(url_for('profile'))
+        else:
+            flash('Neplatný výběr avatara.', 'danger')
             
-    return render_template('profile_settings.html', error=error)
+    return render_template('profile_settings.html')
+
 
 @app.route('/training')
 @login_required

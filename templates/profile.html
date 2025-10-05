@@ -5,33 +5,38 @@
     <div class="col-md-12">
         <h2 class="mb-4">
             Profil uživatele: 
+            <!-- <span class="display-6 fw-bold text-dark">{{ current_user.username }}</span> -->
         </h2>
         
         <div class="card shadow-sm mb-5 p-4 d-flex flex-row align-items-center">
             
-            <!-- Profilová fotka -->
+            <!-- Profilová fotka (Zobrazení vybraného avatara) -->
             <div class="me-4">
-                {% if current_user.profile_image_url %}
-                    <img src="{{ current_user.profile_image_url }}" 
-                         alt="Profilová fotka" 
-                         class="rounded-circle border border-5 border-primary" 
-                         style="width: 120px; height: 120px; object-fit: cover;"
-                         onerror="this.onerror=null; this.src='https://placehold.co/120x120/CCCCCC/333333?text=A'">
+                {% set avatar_id = current_user.profile_image_url or 'male_1' %}
+                {% set parts = avatar_id.split('_') %}
+                {% set gender = parts[0] %}
+                {% set number = parts[1] %}
+
+                {# Používáme /boy/ místo /public/, je to konzistentnější #}
+                {% if gender == 'female' %}
+                    {% set avatar_url = 'https://avatar.iran.liara.run/public/girl?id=' ~ number %}
                 {% else %}
-                    <!-- Zástupný avatar -->
-                    <img src="https://placehold.co/120x120/CCCCCC/333333?text=A" 
-                         alt="Zástupný avatar" 
-                         class="rounded-circle border border-5 border-primary" 
-                         style="width: 120px; height: 120px; object-fit: cover;">
+                    {# DŮLEŽITÉ: Použijeme "boy" pro muže. I když je v URL "public", je lepší být explicitní. #}
+                    {% set avatar_url = 'https://avatar.iran.liara.run/public/boy?id=' ~ number %}
                 {% endif %}
+
+                <img src="{{ avatar_url }}" 
+                    alt="Avatar uživatele" 
+                    class="rounded-circle border border-5 border-primary" 
+                    style="width: 120px; height: 120px; object-fit: cover;">
             </div>
 
             <!-- Informace a Nastavení -->
             <div>
-                <p class="h4">{{ current_user.username }}</p>
+                <p class="text fw-bold">{{ current_user.username }}</p> 
                 <!-- Tlačítko pro přechod na formulář settings -->
                 <a href="{{ url_for('profile_settings') }}" class="btn btn-sm btn-outline-primary mt-2">
-                    Nastavit profilovou fotku
+                    Nastavit avatar
                 </a>
             </div>
         </div>

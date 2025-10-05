@@ -1,35 +1,60 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <h1 class="mb-4">Nastavení profilu</h1>
-        
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title">Změna profilové fotky (URL)</h5>
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h2 class="mb-4">Nastavení Avatara</h2>
+        <p class="text-info">
+            Nabídka avatarů se **mění s každým obnovením stránky**, ale váš **vybraný avatar se uloží** a bude vždy zobrazen na stránce profilu!
+        </p>
 
-                {% if error %}
-                    <div class="alert alert-danger">{{ error }}</div>
-                {% endif %}
-                
-                <form method="POST">
-                    <div class="mb-3">
-                        <label for="profile_image_url" class="form-label">URL adresa fotky (např. https://...) </label>
-                        <input 
-                            type="url" 
-                            class="form-control" 
-                            id="profile_image_url" 
-                            name="profile_image_url" 
-                            value="{{ current_user.profile_image_url or '' }}" 
-                            placeholder="Zadejte celou URL adresu fotky"
-                            >
-                        <div class="form-text">Pro odstranění fotky pole vyprázdněte a uložte.</div>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Uložit změnu</button>
-                    <a href="{{ url_for('profile') }}" class="btn btn-secondary">Zpět na Profil</a>
-                </form>
-            </div>
+        <div class="card p-4 shadow-sm">
+            <form method="POST" action="{{ url_for('profile_settings') }}">
+    
+                {% set selected_avatar = current_user.profile_image_url or 'male_1' %}
+
+                <div class="row g-3">
+                    {% for i in range(1, 6) %} {# Zobrazíme VŠECH 5 mužských avatarů #}
+                        {% set avatar_id = 'male_' ~ i %}
+                        {# KLÍČOVÁ OPRAVA: Použijte stabilní URL pro generování na základě ID #}
+                        {% set avatar_url = 'https://avatar.iran.liara.run/public/boy?id=' ~ i %} 
+                        <div class="col-4 col-sm-2 text-center">
+                            <label class="d-block cursor-pointer">
+                                <input type="radio" name="avatar_id" value="{{ avatar_id }}" 
+                                    {% if avatar_id == selected_avatar %}checked{% endif %}
+                                    class="d-none" required>
+                                
+                                <img src="{{ avatar_url }}" 
+                                    alt="Avatar {{ avatar_id }}" 
+                                    class="rounded-circle border border-2 p-1" 
+                                    style="width: 80px; height: 80px; object-fit: cover;">
+                            </label>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="row g-3 mt-3">
+                    {% for i in range(1, 6) %} {# Zobrazíme VŠECH 5 ženských avatarů #}
+                        {% set avatar_id = 'female_' ~ i %}
+                        {# KLÍČOVÁ OPRAVA: Použijte stabilní URL pro generování na základě ID #}
+                        {% set avatar_url = 'https://avatar.iran.liara.run/public/girl?id=' ~ i %}
+                        <div class="col-4 col-sm-2 text-center">
+                            <label class="d-block cursor-pointer">
+                                <input type="radio" name="avatar_id" value="{{ avatar_id }}" 
+                                    {% if avatar_id == selected_avatar %}checked{% endif %}
+                                    class="d-none" required>
+                                
+                                <img src="{{ avatar_url }}" 
+                                    alt="Avatar {{ avatar_id }}" 
+                                    class="rounded-circle border border-2 p-1" 
+                                    style="width: 80px; height: 80px; object-fit: cover;">
+                            </label>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <button type="submit" class="btn btn-primary mt-4">Uložit výběr avatara</button>
+            </form>
         </div>
     </div>
 </div>
