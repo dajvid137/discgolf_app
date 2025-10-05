@@ -1,8 +1,9 @@
 # app.py
-from flask import Flask, render_template, redirect, url_for, request, session
+from flask import Flask, render_template, redirect, url_for, request, session, flash
 from models import db, User, PuttSession, DriveSession
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from datetime import datetime
+from sqlalchemy import desc
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'tajny_klic'
@@ -66,8 +67,35 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
+@app.route('/profile')
+@login_required
+def profile():
+    # Načtení všech puttovacích sessions pro aktuálně přihlášeného uživatele.
+    # Řadíme podle data od nejnovějšího (desc).
+    putt_sessions = PuttSession.query.filter_by(user_id=current_user.id).order_by(desc(PuttSession.date)).all()
+    
+    return render_template('profil.html', putt_sessions=putt_sessions)
 
-
+@app.route('/profile/settings', methods=['GET', 'POST'])
+@login_required
+def profile_settings():
+    error = None
+    if request.method == 'POST':
+        # Získání URL z formuláře
+        image_url = request.form.get('profile_image_url', '').strip()
+        
+        # Jednoduchá validace
+        if not image_url.startswith('http') and image_url != "":
+            error = "Neplatný formát URL. Musí začínat http:// nebo https://, nebo být ponecháno prázdné."
+        else:
+            # Uložení nové URL do databáze
+            current_user.profile_image_url = image_url
+            db.session.commit()
+            # Zobrazení zprávy o úspěchu (vyžaduje flash)
+            flash('Profilová fotka byla úspěšně aktualizována!', 'success')
+            return redirect(url_for('profile'))
+            
+    return render_template('profile_settings.html', error=error)
 
 @app.route('/training')
 @login_required
@@ -201,23 +229,45 @@ def training_putt(mode):
     return render_template(f'putt/{template}', mode=mode)
 
 
-@app.route('/game_over')
+@app.route('/game_over', methods=['GET', 'POST'])
 @login_required
 def game_over():
+
+    if request.method == "POST":
+
+            # --- 1. Zpracování speciálních tlačítek (Back/Reset) ---
+            
+            if 'newGame' in request.form:
+                session['score'] = 0
+                session['round'] = 1
+                session['distance'] = 10
+                session['prev_score'] = 0 
+                session['prev_round'] = 0
+                session['prev_distance'] = 10
+                session.pop('final_score', None)
+                return redirect(url_for('training_putt', mode='jyly'))
+
     final_score = session.get('final_score', 0)
 
-    training_mode = session.get('current_putt_mode', 'jyly')
-    new_session = PuttSession(
-        date=datetime.utcnow(),      # Aktuální datum a čas (v UTC je dobrý zvyk)
-        score=final_score,
-        mode=training_mode,          # Režim hry (např. 'jyly')
-        user_id=current_user.id      # ID přihlášeného uživatele
-    )
+    # Ukládáme POUZE pokud je 'final_score' v session
+    if 'final_score' in session: 
+        training_mode = session.get('current_putt_mode', 'jyly')
+        
+        # 💡 Ukládání se provede jen tehdy, když je skóre v session
+        new_session = PuttSession(
+            date=datetime.utcnow(),
+            score=final_score,
+            mode=training_mode,
+            user_id=current_user.id
+        )
 
-    # Krok 3: Přidání do databáze a commit
-    db.session.add(new_session)
-    db.session.commit()
-
+        db.session.add(new_session)
+        db.session.commit()
+        
+        # DŮLEŽITÉ: Po uložení skóre smažeme, aby se při dalším refresh/POSTu neuložilo znovu.
+        session.pop('final_score', None)
+               
+    # 3. Zobrazení stránky (použijeme dříve načtené final_score)
     return render_template("putt/game_over.html", final_score=final_score)
 
 @app.route('/training/drive')

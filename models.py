@@ -10,6 +10,7 @@ class User(db.Model, UserMixin):
     password = db.Column(db.String(150), nullable=False)
     putt_sessions = db.relationship('PuttSession', backref='user')
     drive_sessions = db.relationship('DriveSession', backref='user')
+    profile_image_url = db.Column(db.String(255), nullable=True)
 
 class PuttSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
