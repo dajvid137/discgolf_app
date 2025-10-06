@@ -20,6 +20,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
+with app.app_context():
+    db.create_all()
+
 # def md5_filter(s):
 #     """Vrací MD5 hash řetězce, potřebný pro Gravatar."""
 #     return hashlib.md5(s.encode('utf-8')).hexdigest()
