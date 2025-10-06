@@ -62,7 +62,7 @@ def login():
     error = ""
     if request.method == 'POST':
         user = User.query.filter_by(username=request.form['username']).first()
-        if user and user.password == request.form['password']:
+        if user and user.check_password(request.form['password']): 
             login_user(user)
             return render_template('training.html')
         else:
@@ -277,39 +277,56 @@ def training_putt(mode):
             # --- 3. Zpracování skóre a výpočet nového stavu ---
 
 
-
-            # zpracování tlačítka
-            if '0' in request.form:
-                distance = 5
-                # session['jyly_throw_count'] += 5
-            elif '1' in request.form:
-                score += 1 * distance
-                distance = 6
-                # session['jyly_throw_count'] += 5
-            elif '2' in request.form:
-                score += 2 * distance
-                distance = 7
-                # session['jyly_throw_count'] += 5
-            elif '3' in request.form:
-                score += 3 * distance
-                distance = 8
-                # session['jyly_throw_count'] += 5
-            elif '4' in request.form:
-                score += 4 * distance
-                distance = 9
-                # session['jyly_throw_count'] += 5
-            elif '5' in request.form:
-                score += 5 * distance
-                distance = 10
-                # session['jyly_throw_count'] += 5                
-            # elif 'resBtn' in request.form:
+            ###################################tady od semmmmmm
+            # # zpracování tlačítka
+            # if '0' in request.form:
+            #     distance = 5
+            #     # session['jyly_throw_count'] += 5
+            # elif '1' in request.form:
+            #     score += 1 * distance
+            #     distance = 6
+            #     # session['jyly_throw_count'] += 5
+            # elif '2' in request.form:
+            #     score += 2 * distance
+            #     distance = 7
+            #     # session['jyly_throw_count'] += 5
+            # elif '3' in request.form:
+            #     score += 3 * distance
+            #     distance = 8
+            #     # session['jyly_throw_count'] += 5
+            # elif '4' in request.form:
+            #     score += 4 * distance
+            #     distance = 9
+            #     # session['jyly_throw_count'] += 5
+            # elif '5' in request.form:
             #     score += 5 * distance
             #     distance = 10
 
-            # round_ += 1
-            if any(key in request.form for key in ['0', '1', '2', '3', '4', '5']):
+            # if any(key in request.form for key in ['0', '1', '2', '3', '4', '5']):
+            #     round_ += 1
+            #     session['jyly_throw_count'] += 5
+
+            ###################################tady az semmmmmm
+
+            rules = {
+                '0': (0, 5), '1': (1, 6), '2': (2, 7),
+                '3': (3, 8), '4': (4, 9), '5': (5, 10)
+            }
+
+            # Najdeme, které tlačítko bylo stisknuto
+            pressed_button = next((key for key in rules if key in request.form), None)
+
+            if pressed_button:
+                multiplier, next_distance = rules[pressed_button]
+                
+                score += multiplier * distance
+                distance = next_distance
+                
                 round_ += 1
                 session['jyly_throw_count'] += 5
+
+
+                
 
             # pokud je konec hry
             if round_ >= 11:
