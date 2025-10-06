@@ -1,15 +1,23 @@
 # app.py
 from flask import Flask, render_template, redirect, url_for, request, session, flash
-from models import db, User, PuttSession, DriveSession
+from models import db, User, PuttSession, Drive
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from datetime import datetime, timedelta
 from sqlalchemy import desc, func
 import random
 import math
+import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'tajny_klic'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///discgolf.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_secret_key_for_dev')
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///discgolf.db'
+DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///discgolf.db')
+# PostgreSQL vyžaduje malou úpravu URL z 'postgres://' na 'postgresql://'
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 # def md5_filter(s):
@@ -35,23 +43,34 @@ def load_user(user_id):
 def index():
     return render_template('index.html')
 
+# app.py
+
 @app.route('/register', methods=['GET','POST'])
 def register():
     error = None
     if request.method == 'POST':
         username = request.form['username']
+        email = request.form['email'] # <-- Načteme email
         password = request.form['password']
 
-        # Kontrola, jestli uživatel existuje
+        # Kontrola, jestli uživatel nebo email existuje
         existing_user = User.query.filter_by(username=username).first()
         if existing_user:
             error = "Toto uživatelské jméno je již obsazeno."
             return render_template('register.html', error=error)
         
-        # Pokud neexistuje, vytvoříme nového uživatele
-        new_user = User(username=username, password=password)
+        # NOVINKA: Kontrola, jestli email již existuje
+        existing_email = User.query.filter_by(email=email).first()
+        if existing_email:
+            error = "Tato emailová adresa je již registrována."
+            return render_template('register.html', error=error)
+        
+        # Pokud neexistuje, vytvoříme nového uživatele i s emailem
+        new_user = User(username=username, email=email, password=password)
         db.session.add(new_user)
         db.session.commit()
+        
+        flash('Registrace proběhla úspěšně! Nyní se můžete přihlásit.', 'success')
         return redirect(url_for('login'))
 
     return render_template('register.html', error=error)
@@ -326,7 +345,7 @@ def training_putt(mode):
                 session['jyly_throw_count'] += 5
 
 
-                
+
 
             # pokud je konec hry
             if round_ >= 11:
@@ -561,8 +580,10 @@ def game_over_daily():
         # Ukládání se provede jen tehdy, když je skóre v session
         new_session = PuttSession(
             date=datetime.utcnow(),
-            score=final_score,
             mode=training_mode,
+            score=final_score,                  # Stále ukládáme celkové skóre
+            successful_putts=final_score,       # Pro Daily Putt je počet trefených stejný jako skóre
+            total_putts=total_throws,           # NOVINKA: Uložíme celkový počet hodů
             user_id=current_user.id
         )
 
@@ -673,5 +694,7 @@ def training_drive():
 
 
 if __name__ == '__main__':
+    # with app.app_context():
+    #     db.create_all() # Vytvoří tabulky podle modelů, pokud neexistují
     app.run(host="0.0.0.0", port=5000, debug=True)
 

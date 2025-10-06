@@ -1,0 +1,9 @@
+# Složka virtuálního prostředí
+venv/
+
+# Cache soubory Pythonu
+__pycache__/
+*.pyc
+
+# Lokální databáze
+instance/
