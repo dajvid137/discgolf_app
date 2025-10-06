@@ -346,19 +346,205 @@ def training_putt(mode):
             progress_percentage=progress_percentage,
             progress_style_attr=progress_style_attr
         )
+    
+    elif mode == 'daily_putt':
+        template = 'daily_putt_setup.html'
+        session['current_putt_mode'] = mode
 
+        # --- FÁZE 1: Nastavení (GET & První POST) ---
+        if 'total_throws' not in session or request.form.get('setup_complete') != 'true':
+            # Zobrazení formuláře pro nastavení
+            template = 'putt/daily_putt_setup.html'
+            
+            if request.method == "POST":
+                try:
+                    # Načtení nastavení z formuláře
+                    total_putts = int(request.form['total_putts'])
+                    distance = int(request.form['distance'])
+                    discs = int(request.form['discs'])
+                    
+                    # Validace rozsahů
+                    if not (10 <= total_putts <= 300 and 5 <= distance <= 10 and 1 <= discs <= 10):
+                        flash('Neplatné nastavení. Zkontrolujte rozsahy (Putts: 10-300, Vzdálenost: 5-10m, Disků: 1-10).', 'danger')
+                        return render_template(template)
+
+                    # Výpočet celkového počtu kol
+                    total_rounds = total_putts // discs
+                    
+                    # Uložení nastavení do session
+                    session['total_putts'] = total_putts
+                    session['distance'] = distance
+                    session['discs'] = discs
+                    session['total_rounds'] = total_rounds
+                    
+                    # Inicializace herního stavu
+                    session['score'] = 0          # Počet úspěšných puttů
+                    session['round'] = 1          # Aktuální kolo
+                    session['prev_score'] = 0     # Pro funkci Zpět
+                    session['prev_round'] = 1     # Pro funkci Zpět
+                    session['prev_discs'] = 0     # Počet puttů v posledním kole pro funkci Zpět
+                    session['current_discs_made'] = 0 # Počet vhozených disků v aktuálním kole
+
+                    # Přesměrování na samotnou hru
+                    return redirect(url_for('training_putt', mode='daily_putt', _external=False))
+
+                except (ValueError, KeyError):
+                    flash('Chyba při zpracování formuláře. Zkuste to znovu.', 'danger')
+                    return render_template(template)
+            
+            # GET: Zobrazení formuláře pro nastavení
+            return render_template(template)
+
+
+        # --- FÁZE 2: Samotná hra (POST po nastavení) ---
+        
+        template = 'putt/daily_putt_game.html'
+        
+        # Načtení aktuálního stavu
+        score = session.get('score', 0)
+        round_ = session.get('round', 1)
+        distance = session.get('distance', 5)
+        discs = session.get('discs', 5)
+        total_rounds = session.get('total_rounds', 20)
+        current_discs_made = session.get('current_discs_made', 0)
+        
+        if request.method == "POST":
+            
+            # 1. Zpracování Back/Reset (Reset znamená návrat na setup)
+            if 'back' in request.form:
+                # Obnovení z předchozího stavu
+                session['score'] = session.get('prev_score', 0)
+                session['round'] = session.get('prev_round', 1)
+                session['current_discs_made'] = session.get('prev_discs', 0)
+                # Zrušení prev_stavu
+                session['prev_score'] = 0 
+                session['prev_round'] = 1
+                session['prev_discs'] = 0
+                return redirect(url_for('training_putt', mode='daily_putt'))
+
+            elif 'resBtn' in request.form:
+                # Reset celé hry (zpět na nastavení)
+                session.pop('total_putts', None)
+                return redirect(url_for('training_putt', mode='daily_putt'))
+
+            # 2. Uložení aktuálního stavu jako "Předchozí" pro další krok
+            session['prev_score'] = score
+            session['prev_round'] = round_
+            session['prev_discs'] = current_discs_made # Ukládáme skóre aktuálního kola
+
+            # 3. Zpracování skóre pro aktuální kolo
+            try:
+                # Hodnota tlačítka (kolik disků se trefilo)
+                hits = int(request.form.get('hits', 0))
+            except ValueError:
+                hits = 0
+
+            # Započtení skóre a příprava na další kolo
+            score += hits
+            current_discs_made = hits # Počet vhozených disků v aktuálním kole
+
+            # Přechod na další kolo
+            round_ += 1 
+
+            # Uložení aktuálního stavu
+            session['score'] = score
+            session['round'] = round_
+            session['current_discs_made'] = 0 # Pro další kolo vynulujeme (jen pro zobrazení)
+            
+            # 4. Kontrola konce hry
+            if round_ > total_rounds:
+                session['final_score'] = score
+                session['total_throws'] = session['total_putts']
+                # Vymazání herních proměnných, ale ponechání nastavení pro refresh
+                session['score'] = 0
+                session['round'] = 1
+                session.pop('current_discs_made', None)
+                return redirect(url_for('game_over_daily'))
+
+
+            # redirect po POSTu
+            return redirect(url_for('training_putt', mode='daily_putt'))
+
+        # --- FÁZE 3: Zobrazení herní obrazovky (GET po nastavení) ---
+
+        # Procenta úspěšnosti v průběhu hry
+        current_putt_count = (round_ - 1) * discs
+        current_percentage = (score / current_putt_count) * 100 if current_putt_count > 0 else 0
+        
+        # Progres bar (Celkový počet)
+        total_throws = session['total_putts']
+        progress_percentage = (current_putt_count / total_throws) * 100
+        progress_style_attr = f"width: {int(progress_percentage)}%;"
+
+        return render_template(
+            template,
+            mode=mode,
+            Hscore=score,
+            Hround=round_,
+            Hdistance=distance,
+            Hdiscs=discs,
+            Htotal_rounds=total_rounds,
+            current_percentage=current_percentage,
+            current_putt_count=current_putt_count,
+            progress_style_attr=progress_style_attr
+        )
+        
     elif mode == 'puttovacka':
         template = 'puttovacka.html'
         # specifická logika pro Puttovačku
-
-    elif mode == 'random':
-        template = 'random.html'
-        # specifická logika pro Random
+    # ...
 
     else:
         return "Neznámý režim", 404
 
     return render_template(f'putt/{template}', mode=mode)
+
+
+@app.route('/game_over_daily', methods=['GET', 'POST'])
+@login_required
+def game_over_daily():
+    # Odlišná routa pro Denní trénink pro čistší logiku ukládání
+    
+    if request.method == "POST":
+        if 'newGame' in request.form:
+            # Smažeme nastavení, aby se uživateli zobrazil setup formulář
+            session.pop('total_putts', None) 
+            session.pop('total_rounds', None)
+            session.pop('discs', None)
+            session.pop('distance', None)
+            session.pop('final_score', None)
+            session.pop('total_throws', None)
+            return redirect(url_for('training_putt', mode='daily_putt'))
+
+    final_score = session.get('final_score', 0)
+    total_throws = session.get('total_throws', 1) # Mělo by být v session
+
+    # Ukládáme POUZE pokud je 'final_score' v session
+    if 'final_score' in session: 
+        training_mode = session.get('current_putt_mode', 'daily_putt')
+        
+        # Ukládání se provede jen tehdy, když je skóre v session
+        new_session = PuttSession(
+            date=datetime.utcnow(),
+            score=final_score,
+            mode=training_mode,
+            user_id=current_user.id
+        )
+
+        db.session.add(new_session)
+        db.session.commit()
+        
+        # DŮLEŽITÉ: Po uložení skóre smažeme, aby se při dalším refresh/POSTu neuložilo znovu.
+        session.pop('final_score', None)
+               
+    percentage = (final_score / total_throws) * 100 if total_throws > 0 else 0
+    
+    return render_template(
+        "putt/game_over_daily.html", 
+        final_score=final_score,
+        total_throws=total_throws,
+        percentage=percentage
+    )
 
 
 @app.route('/game_over', methods=['GET', 'POST'])

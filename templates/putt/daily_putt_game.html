@@ -1,0 +1,57 @@
+{# templates/putt/daily_putt_game.html #}
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5 text-center">
+    <div class="card text-center shadow-sm p-4 mb-3" style="border-left: 5px solid #3B82F6;">
+        <h2 class="card-title text-primary">Kolo: {{ Hround }}/{{ Htotal_rounds }}</h2>
+        <h4 class="card-subtitle mb-2 text-muted">Vzdálenost: {{ Hdistance }}m | Hodů v kole: {{ Hdiscs }}</h4>
+        <h3 class="card-text mt-3 fw-bold">Skóre: {{ Hscore }} / {{ current_putt_count }} ({{ "%.1f"|format(current_percentage) }}%)</h3>
+    </div>
+
+    <div class="container mt-4 mb-4">
+        <h4>Celkový pokrok</h4> 
+        <div class="progress" style="height: 20px;">
+            <div class="progress-bar bg-primary" role="progressbar" 
+                style="{{ progress_style_attr }}" 
+                aria-valuenow="{{ progress_style_attr|replace('width: ', '')|replace('%;', '')|int }}" 
+                aria-valuemin="0" 
+                aria-valuemax="100">
+                {{ progress_style_attr|replace('width: ', '')|replace('%;', '')|format("%.0f") }}%
+            </div>
+        </div>
+    </div>
+
+
+    <form method="POST" action="{{ url_for('training_putt', mode='daily_putt') }}">
+        <div class="container text-center">
+            
+            <h4 class="mb-3">Kolik disků jsi trefil v tomto kole?</h4>
+            
+            <div class="d-flex flex-wrap justify-content-center gap-2 mb-4">
+                {# Tlačítka pro počet trefených disků #}
+                {% for i in range(Hdiscs + 1) %}
+                    <button type="submit" name="hits" value="{{ i }}" 
+                            class="btn btn-outline-success btn-lg" 
+                            style="min-width: 60px;">
+                        {{ i }}
+                    </button>
+                {% endfor %}
+            </div>
+
+            <div class="row justify-content-center mt-4">
+                <div class="col-6 col-sm-3 col-md-2">
+                    <button type="submit" name="back" class="btn btn-secondary w-100 mb-2">Zpět</button>
+                </div>
+                <div class="col-6 col-sm-3 col-md-2">
+                    <button type="submit" name="resBtn" class="btn btn-secondary w-100 mb-2" 
+                            onclick="return confirm('Opravdu chcete restartovat trénink a vrátit se na nastavení?');">
+                        Resetovat
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </form>
+</div>
+{% endblock %}
