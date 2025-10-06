@@ -16,7 +16,7 @@
                 {% set default_url = url_for('static', filename='images/avatar/male/12.png') %}
                 {% set selected_avatar_url = current_user.profile_image_url or default_url %}
 
-                <h5 class="mb-3 mt-3">Muži ({{ male_avatars|length }} náhodných):</h5>
+                <!-- <h5 class="mb-3 mt-3">Muži ({{ male_avatars|length }} náhodných):</h5> -->
                 <div class="row g-3">
                     {# Cyklíme přes předaná data z app.py #}
                     {% for avatar in male_avatars %}
@@ -37,7 +37,7 @@
                     {% endfor %}
                 </div>
 
-                <h5 class="mb-3 mt-4">Ženy ({{ female_avatars|length }} náhodných):</h5>
+                <!-- <h5 class="mb-3 mt-4">Ženy ({{ female_avatars|length }} náhodných):</h5> -->
                 <div class="row g-3">
                     {# Cyklíme přes předaná data z app.py #}
                     {% for avatar in female_avatars %}

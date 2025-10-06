@@ -5,6 +5,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from datetime import datetime, timedelta
 from sqlalchemy import desc, func
 import random
+import math
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'tajny_klic'
@@ -392,20 +393,18 @@ def training_putt(mode):
                     discs = int(request.form.get('discs', 0))
                     
                     # 1. Validace rozsahů
-                    if not (10 <= total_putts <= 300 and 5 <= distance <= 10 and 1 <= discs <= 10):
+                    if not (100 <= total_putts <= 300 and 5 <= distance <= 10 and 1 <= discs <= 10):
                         flash('Neplatné nastavení. Zkontrolujte rozsahy (Putts: 10-300, Vzdálenost: 5-10m, Disků: 1-10).', 'danger')
                         return render_template(SETUP_TEMPLATE)
                     
-                    # 2. Validace dělitelnosti
-                    if discs == 0 or total_putts % discs != 0:
-                        flash('Chyba: Celkový počet puttů musí být dělitelný počtem disků na kolo.', 'danger')
-                        return render_template(SETUP_TEMPLATE)
+                    total_rounds = int(math.ceil(total_putts / discs))
+                    session['total_rounds'] = total_rounds 
 
                     # Uložení nastavení do session a inicializace hry
                     session['total_putts'] = total_putts
                     session['distance'] = distance
                     session['discs'] = discs
-                    session['total_rounds'] = total_putts // discs
+                    # session['total_rounds'] = total_putts // discs
                     session['score'] = 0
                     session['round'] = 1
                     session['prev_score'] = 0
@@ -485,6 +484,13 @@ def training_putt(mode):
         total_throws = session['total_putts']
         progress_percentage = (current_putt_count / total_throws) * 100
         progress_style_attr = f"width: {int(progress_percentage)}%;"
+
+        discs_to_throw = discs 
+        remaining_putts = session['total_putts'] - current_putt_count
+        if round_ == total_rounds and remaining_putts > 0:
+            # Pokud je aktuální kolo poslední A zbývají nějaké hody (např. 2), použijeme je
+            # Vypočítáme zbývající hody
+            discs_to_throw = remaining_putts
 
         return render_template(
             GAME_TEMPLATE,
