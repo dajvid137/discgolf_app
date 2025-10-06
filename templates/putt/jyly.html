@@ -26,14 +26,30 @@
 </style>
 
 <div class="container mt-5 text-center">
-    <div class="card text-center shadow-sm p-3 mb-3">
-        <h2 class="card-title">Skóre: {{ Hscore }}</h2>
-        <h4 class="card-subtitle mb-2 text-muted">Kolo: {{ Hround }}/10</h4>
-        <h5 class="card-text">Vzdálenost: {{ Hdistance }}m</h5>
+    <h1 class="mb-4 text-primary fw-bold">JYLY</h1>
+
+    <div class="card text-center shadow-sm p-4 mb-3" style="border-left: 5px solid #3B82F6;">
+        <h2 class="card-title text-primary">Kolo: {{ Hround }}/10</h2>
+        <h4 class="card-subtitle mb-2 text-muted">Vzdálenost: {{ Hdistance }}m</h3>
+    <!-- <h3 class="card-text mt-3 fw-bold">
+        Skóre: {{ Hscore }}
+        <span class="text-muted fw-normal">|</span>
+        <span class="text-primary">{{ "%.1f"|format((Hscore / 500) * 100) }}%</span>
+    </h3> -->
+    <h3 class="card-text mt-3 fw-bold">
+        Skóre: {{ Hscore }}
+        <span class="text-muted fw-normal">|</span>
+        
+        {# Zde použijeme vypočtené procento z max. dosud možného skóre #}
+        <span class="text-primary">{{ "%.1f"|format(current_percentage) }}%</span>
+        
+        <!-- <span class="text-muted fw-normal"> (Zatím z Max. {{ max_possible_score }})</span> -->
+    </h3>
     </div>
 
     <div class="container mt-4 mb-4">
-        <h4>Zbývá hodů: {{ 50 - current_throw_count }}</h4> 
+        <!-- <h4>Zbývá hodů: {{ 50 - current_throw_count }}</h4>  -->
+         <h4>Celkový pokrok</h4>
         
         <div class="progress" style="height: 20px;">
             <div class="progress-bar bg-success" role="progressbar" 

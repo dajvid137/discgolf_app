@@ -3,26 +3,27 @@
 
 {% block content %}
 <div class="card shadow-lg p-4 mx-auto" style="max-width: 450px; border: 2px solid #3B82F6; background-color: #EFF6FF;">
-        <h1 class="card-title text-primary mb-3">
+    <!-- <h1 class="mb-4 text-primary fw-bold">Denní trénink</h1>     -->
+    <h1 class="card-title text-primary mb-3">
             <i class="fas fa-check-circle mr-2"></i> Denní trénink dokončen!
         </h1>
         
         <hr class="my-3">
 
-        <h2 class="display-4 font-weight-bold text-dark">
-            {{ "%.1f"|format(percentage) }}%
-        </h2>
-        <p class="h5 text-secondary mb-4">Úspěšnost puttů</p>
+        
+
+        <!-- <div class="row text-left mx-auto mb-4" style="max-width: 300px;"> -->
+            <h2 class="display-4 font-weight-bold text-dark">
+                <span class="font-weight-bold">{{ final_score }}/{{ total_throws }}</span>
+            </h2>
+                <p class="font-weight-medium text-info"><i class="fas fa-bullseye"></i> Finální skóre: </p>
+        
 
         <div class="row text-left mx-auto mb-4" style="max-width: 300px;">
-            <div class="col-12 d-flex justify-content-between">
-                <span class="font-weight-medium text-info"><i class="fas fa-bullseye"></i> Trefeno: </span>
-                <span class="font-weight-bold">{{ final_score }}</span>
-            </div>
-            <div class="col-12 d-flex justify-content-between">
-                <span class="font-weight-medium text-info"><i class="fas fa-list-ol"></i> Celkem hodů: </span>
-                <span class="font-weight-bold">{{ total_throws }}</span>
-            </div>
+            <span class="col-12 d-flex justify-content-between">
+                {{ "%.1f"|format(percentage) }}%
+            </span>
+            <span class="h5 text-secondary mb-4">Úspěšnost puttů</span>
         </div>
 
     <form method="POST" action="{{ url_for('game_over_daily') }}">

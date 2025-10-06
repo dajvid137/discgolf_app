@@ -3,10 +3,17 @@
 
 {% block content %}
 <div class="container mt-5 text-center">
+    <h1 class="mb-4 text-primary fw-bold">Denní trénink</h1>
+
     <div class="card text-center shadow-sm p-4 mb-3" style="border-left: 5px solid #3B82F6;">
         <h2 class="card-title text-primary">Kolo: {{ Hround }}/{{ Htotal_rounds }}</h2>
-        <h4 class="card-subtitle mb-2 text-muted">Vzdálenost: {{ Hdistance }}m | Hodů v kole: {{ Hdiscs }}</h4>
-        <h3 class="card-text mt-3 fw-bold">Skóre: {{ Hscore }} / {{ current_putt_count }} ({{ "%.1f"|format(current_percentage) }}%)</h3>
+        <h4 class="card-subtitle mb-2 text-muted">Vzdálenost: {{ Hdistance }}m</h4>
+        <!-- <h3 class="card-text mt-3 fw-bold">Skóre: {{ Hscore }} ({{ "%.1f"|format(current_percentage) }}%)</h3> -->
+        <h3 class="card-text mt-3 fw-bold">
+        Skóre: {{ Hscore }}
+        <span class="text-muted fw-normal">|</span>
+        <span class="text-primary">{{ "%.1f"|format(current_percentage) }}%</span>
+    </h3>
     </div>
 
     <div class="container mt-4 mb-4">
@@ -14,10 +21,10 @@
         <div class="progress" style="height: 20px;">
             <div class="progress-bar bg-primary" role="progressbar" 
                 style="{{ progress_style_attr }}" 
-                aria-valuenow="{{ progress_style_attr|replace('width: ', '')|replace('%;', '')|int }}" 
+                aria-valuenow="{{ progress_percentage|int }}" 
                 aria-valuemin="0" 
                 aria-valuemax="100">
-                {{ progress_style_attr|replace('width: ', '')|replace('%;', '')|format("%.0f") }}%
+                {{ "%.0f"|format(progress_percentage) }}%
             </div>
         </div>
     </div>
