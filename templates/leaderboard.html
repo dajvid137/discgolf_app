@@ -1,0 +1,48 @@
+{# templates/leaderboard.html #}
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4 text-center">🏆 Měsíční Žebříček: JYLY</h2>
+    
+    <p class="text-center text-muted h5 mb-4">
+        Skóre za: <span class="fw-bold text-primary">{{ current_month_str }}</span>
+    </p>
+
+    {% if leaderboard_data %}
+        <div class="table-responsive" style="max-width: 600px; margin: 0 auto;">
+            <table class="table table-striped table-hover shadow-lg rounded">
+                <thead class="bg-primary text-white">
+                    <tr>
+                        <th scope="col" class="text-center">#</th>
+                        <th scope="col">Uživatel</th>
+                        <th scope="col" class="text-end">Nejlepší skóre</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for username, score in leaderboard_data %}
+                    <tr class="{% if username == current_user.username %}table-success fw-bold{% endif %}">
+                        <td class="text-center">{{ loop.index }}</td>
+                        <td>
+                            {% if username == current_user.username %}
+                                {{ username }} (Ty)
+                            {% else %}
+                                {{ username }}
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <span class="badge bg-success fs-6">{{ score }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-warning text-center" role="alert" style="max-width: 600px; margin: 0 auto;">
+            Zatím nebyly v tomto měsíci zaznamenány žádné výsledky z tréninku Jyly. Buď první!
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

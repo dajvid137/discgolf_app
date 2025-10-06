@@ -402,6 +402,46 @@ def game_over():
     # 3. Zobrazení stránky (použijeme dříve načtené final_score)
     return render_template("putt/game_over.html", final_score=final_score)
 
+@app.route('/leaderboard')
+def leaderboard():
+    # 1. Definice začátku a konce aktuálního měsíce
+    today = datetime.now()
+    # Začátek měsíce (první den v 00:00:00)
+    start_of_month = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    # 2. Vytvoření poddotazu pro nalezení nejlepšího skóre pro každého uživatele
+    # Filtr: pouze režim 'jyly' a pouze sessions v aktuálním měsíci
+    subquery = (
+        db.session.query(
+            PuttSession.user_id,
+            func.max(PuttSession.score).label('best_score') # Najdeme MAX skóre
+        )
+        .filter(PuttSession.mode == 'jyly')
+        .filter(PuttSession.date >= start_of_month)
+        # .filter(PuttSession.date < start_of_next_month) # Není nutné, stačí '>=' start_of_month
+        .group_by(PuttSession.user_id) # Seskupíme podle uživatele
+        .subquery()
+    )
+    
+    # 3. Hlavní dotaz: Spojení (JOIN) s tabulkou User a seřazení
+    # Získáme uživatelské jméno a nejlepší skóre
+    leaderboard_data = (
+        db.session.query(User.username, subquery.c.best_score)
+        .join(subquery, User.id == subquery.c.user_id)
+        .order_by(desc(subquery.c.best_score)) # Seřadíme od nejlepšího
+        .all()
+    )
+
+    # Připravíme datum pro zobrazení v šabloně
+    current_month_str = start_of_month.strftime('%B %Y')
+    
+    return render_template(
+        'leaderboard.html', 
+        leaderboard_data=leaderboard_data,
+        current_month_str=current_month_str
+    )
+
+
 @app.route('/training/drive')
 @login_required
 def training_drive():
