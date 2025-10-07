@@ -221,6 +221,58 @@ def profile_settings():
         female_avatars=female_avatars
     )
 
+@app.route('/user/<username>')
+@login_required
+def user_profile(username):
+    user = User.query.filter_by(username=username).first_or_404()
+
+    # === NOVÁ ČÁST PRO FILTROVÁNÍ ===
+    # 1. Načtení filtrů z URL, pokud existují
+    mode_filter = request.args.get('mode_filter', '')
+    period_filter = request.args.get('period_filter', 'all')
+    
+    # 2. Vytvoření základního dotazu na sessions daného uživatele
+    query = PuttSession.query.filter_by(user_id=user.id)
+    
+    # 3. Aplikace filtru podle herního režimu
+    if mode_filter:
+        query = query.filter(PuttSession.mode == mode_filter)
+        
+    # 4. Aplikace filtru podle časového období
+    start_date = None
+    if period_filter == '7':
+        start_date = datetime.now() - timedelta(days=7)
+    elif period_filter == '30':
+        start_date = datetime.now() - timedelta(days=30)
+        
+    if start_date:
+        query = query.filter(PuttSession.date >= start_date)
+    # === KONEC NOVÉ ČÁSTI PRO FILTROVÁNÍ ===
+
+    # Získání dat pro Tabulku Historie (seřazeno od nejnovějšího)
+    # Použijeme náš finální, vyfiltrovaný dotaz 'query'
+    putt_sessions = query.order_by(desc(PuttSession.date)).all()
+
+    # Příprava dat pro Graf (seřazeno od nejstaršího)
+    sessions_for_chart = sorted(putt_sessions, key=lambda x: x.date)
+    
+    chart_labels = [session.date.strftime('%d.%m.') for session in sessions_for_chart]
+    chart_scores = [session.score for session in sessions_for_chart]
+        
+    chart_data = {
+        'labels': chart_labels,
+        'scores': chart_scores
+    }
+
+    return render_template(
+        'user_profile.html', 
+        user=user, 
+        putt_sessions=putt_sessions,
+        chart_data=chart_data,
+        # DŮLEŽITÉ: Předáme vybrané hodnoty, aby zůstaly v menu zaškrtnuté
+        selected_mode=mode_filter,
+        selected_period=period_filter
+    )
 
 
 @app.route('/training')
@@ -677,9 +729,9 @@ def leaderboard():
     # 3. Hlavní dotaz: Spojení (JOIN) s tabulkou User a seřazení
     # Získáme uživatelské jméno a nejlepší skóre
     leaderboard_data = (
-        db.session.query(User.username, subquery.c.best_score)
+        db.session.query(User, subquery.c.best_score) # <-- ZMĚNA ZDE
         .join(subquery, User.id == subquery.c.user_id)
-        .order_by(desc(subquery.c.best_score)) # Seřadíme od nejlepšího
+        .order_by(desc(subquery.c.best_score))
         .all()
     )
 

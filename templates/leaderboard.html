@@ -20,14 +20,19 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for username, score in leaderboard_data %}
-                    <tr class="{% if username == current_user.username %}table-success fw-bold{% endif %}">
+                    {# Změníme proměnné ve for cyklu #}
+                    {% for user, score in leaderboard_data %}
+                    <tr class="{% if user.username == current_user.username %}table-success fw-bold{% endif %}">
                         <td class="text-center">{{ loop.index }}</td>
                         <td>
-                            {% if username == current_user.username %}
-                                {{ username }} (Ty)
-                            {% else %}
-                                {{ username }}
+                            {# Obalíme jméno odkazem, který vede na novou routu #}
+                            <a href="{{ url_for('user_profile', username=user.username) }}" style="text-decoration: none; color: inherit;">
+                                {{ user.username }}
+                            </a>
+
+                            {# Zvýraznění aktuálního uživatele #}
+                            {% if user.username == current_user.username %}
+                                (Ty)
                             {% endif %}
                         </td>
                         <td class="text-end">

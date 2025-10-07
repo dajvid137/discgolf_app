@@ -1,0 +1,120 @@
+{# templates/user_profile.html #}
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">
+        Profil uživatele:
+    </h2>
+
+    <div class="card shadow-sm mb-5 p-4 d-flex flex-row align-items-center">
+        <div class="me-4">
+            {# Použijeme výchozí avatar, pokud uživatel nemá nastavený vlastní #}
+            {% set default_url = url_for('static', filename='images/avatar/male/12.png') %}
+            {% set avatar_url = user.profile_image_url or default_url %}
+
+            <img src="{{ avatar_url }}"
+                 alt="Avatar uživatele"
+                 class="rounded-circle border border-5 border-primary"
+                 style="width: 120px; height: 120px; object-fit: cover;">
+        </div>
+        <div>
+            <h3 class="fw-bold">{{ user.username }}</h3>
+        </div>
+    </div>
+
+    <h4 class="mb-3">Historie puttování</h4>
+    <div class="card shadow-sm mb-4 p-4">
+        <canvas id="scoreTrendChart" style="max-height: 250px;"></canvas>
+        
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const chartDataRaw = '{{ chart_data | tojson | safe }}';
+                
+                if (!chartDataRaw || JSON.parse(chartDataRaw).labels.length === 0) {
+                    console.log("Žádná data pro vykreslení grafu.");
+                    return;
+                }
+                
+                const chartData = JSON.parse(chartDataRaw);
+                const ctx = document.getElementById('scoreTrendChart');
+                
+                if (!ctx) {
+                    console.error("Chyba: Element s ID 'scoreTrendChart' nebyl nalezen.");
+                    return;
+                }
+
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: chartData.labels,
+                        datasets: [{
+                            label: 'Skóre za session',
+                            data: chartData.scores,
+                            borderColor: 'rgba(0, 123, 255, 1)',
+                            backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            });
+        </script>
+        <hr class="my-4"> <form method="GET" action="{{ url_for('user_profile', username=user.username) }}" class="d-flex flex-wrap align-items-center gap-3">
+            
+            <label for="mode_filter" class="form-label mb-0">Režim:</label>
+            <select name="mode_filter" id="mode_filter" class="form-select w-auto">
+                <option value="">Všechny</option>
+                <option value="jyly" {% if selected_mode == 'jyly' %}selected{% endif %}>Jyly</option>
+                <option value="daily_putt" {% if selected_mode == 'daily_putt' %}selected{% endif %}>Daily Putt</option>
+                <option value="puttovacka" {% if selected_mode == 'puttovacka' %}selected{% endif %}>Puttovačka</option>
+                <option value="random" {% if selected_mode == 'random' %}selected{% endif %}>Náhodné vzdálenosti</option>
+            </select>
+            
+            <label for="period_filter" class="form-label mb-0">Období:</label>
+            <select name="period_filter" id="period_filter" class="form-select w-auto">
+                <option value="all" {% if selected_period == 'all' %}selected{% endif %}>Celá historie</option>
+                <option value="30" {% if selected_period == '30' %}selected{% endif %}>Posledních 30 dní</option>
+                <option value="7" {% if selected_period == '7' %}selected{% endif %}>Posledních 7 dní</option>
+            </select>
+            
+            <button type="submit" class="btn btn-sm btn-primary">Filtrovat</button>
+        </form>
+    </div>
+
+    <h3 class="mb-3">Historie puttování</h3>
+
+    {% if putt_sessions %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover shadow-sm rounded">
+                <thead class="bg-light">
+                    <tr>
+                        <th scope="col">Datum</th>
+                        <th scope="col">Režim</th>
+                        <th scope="col">Skóre</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for session in putt_sessions %}
+                    <tr>
+                        <td>{{ session.date.strftime('%d.%m. %Y') }}</td>
+                        <td>{{ session.mode.replace('_', ' ')|title }}</td>
+                        <td><span class="badge bg-success fs-6">{{ session.score }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            Tento uživatel zatím nemá žádné záznamy o puttování.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

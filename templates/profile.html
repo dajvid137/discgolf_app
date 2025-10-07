@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row">
+<div class="container mt-5">
     <div class="col-md-12">
         <h2 class="mb-4">
             Profil uživatele: 
@@ -31,7 +31,7 @@
             </div>
         </div>
 
-        <h2 class="mb-3">Historie puttování</h2>
+        <h4 class="mb-3">Historie puttování</h4>
         
         {#
         NOVÁ SEKCE PRO GRAF A FILTRY ZDE
@@ -115,6 +115,8 @@
                     <option value="jyly" {% if request.args.get('mode_filter') == 'jyly' %}selected{% endif %}>Jyly</option>
                     <option value="puttovacka" {% if request.args.get('mode_filter') == 'puttovacka' %}selected{% endif %}>Puttovačka</option>
                     <option value="random" {% if request.args.get('mode_filter') == 'random' %}selected{% endif %}>Náhodné vzdálenosti</option>
+                    <option value="daily_putt" {% if request.args.get('mode_filter') == 'daily_putt' %}selected{% endif %}>Daily Putt</option>
+                    <option value="survival" {% if request.args.get('mode_filter') == 'survival' %}selected{% endif %}>Survival</option>
                 </select>
                 
                 <label for="period_filter" class="form-label mb-0">Období:</label>
@@ -151,6 +153,10 @@
                                     Puttovačka
                                 {% elif session.mode == 'random' %}
                                     Náhodné vzdálenosti
+                                {% elif session.mode == 'daily_putt' %}
+                                    Daily Putt
+                                {% elif session.mode == 'survival' %}
+                                    Survival
                                 {% else %}
                                     Neznámý
                                 {% endif %}
