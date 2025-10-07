@@ -551,6 +551,12 @@ def training_putt(mode):
         # specifická logika pro Puttovačku
     # ...
 
+    elif mode == 'random':
+        template = 'random.html'
+
+    elif mode == 'survival':
+        template = 'survival.html'
+
     else:
         return "Neznámý režim", 404
 
