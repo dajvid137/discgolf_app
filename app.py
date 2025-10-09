@@ -97,68 +97,89 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
+# app.py
+
+# app.py
+
 @app.route('/profile')
 @login_required
 def profile():
-    # 1. Čtení parametrů z URL (filtru)
-    # Získáváme hodnoty filtrů z URL (request.args). 
-    # Pokud nejsou nastaveny, použijeme výchozí hodnoty.
-    mode_filter = request.args.get('mode_filter', '')  # '' = Všechny režimy
-    period_filter = request.args.get('period_filter', 'all') # 'all' = Celá historie
+    mode_filter = request.args.get('mode_filter', '')
+    period_filter = request.args.get('period_filter', 'all')
     
-    # Začneme s dotazem na sessions aktuálního uživatele
-    query = PuttSession.query.filter_by(user_id=current_user.id)
+    base_query = PuttSession.query.filter_by(user_id=current_user.id)
+
+    # --- VÝPOČET STATISTIK ---
+    total_sessions = base_query.count()
+    best_jyly_accuracy = db.session.query(func.max(PuttSession.accuracy)).filter(
+        PuttSession.user_id == current_user.id, 
+        PuttSession.mode == 'jyly'
+    ).scalar() or 0.0
     
-    # 2. Aplikace filtru podle Režimu Hry (mode)
+    daily_putt_stats = db.session.query(
+        func.sum(PuttSession.successful_putts), func.sum(PuttSession.total_putts)
+    ).filter(
+        PuttSession.user_id == current_user.id,
+        PuttSession.mode == 'daily_putt'
+    ).first()
+    
+    avg_daily_putt_accuracy = 0.0
+    if daily_putt_stats and daily_putt_stats[1]:
+        avg_daily_putt_accuracy = (daily_putt_stats[0] / daily_putt_stats[1]) * 100
+    
+    longest_drive = db.session.query(func.max(Drive.distance)).filter(
+        Drive.user_id == current_user.id
+    ).scalar() or 0.0
+    
+    user_stats = {
+        'total_sessions': total_sessions,
+        'best_jyly_accuracy': best_jyly_accuracy,
+        'avg_daily_putt_accuracy': avg_daily_putt_accuracy,
+        'streak': current_user.current_streak,
+        'longest_drive': longest_drive
+    }
+    
+    # Výpočet levelu a XP
+    level = (total_sessions // 5) + 1
+    sessions_in_current_level = total_sessions % 5
+    xp_for_next_level = 5
+    xp_percentage = (sessions_in_current_level / xp_for_next_level) * 100
+    
+    # Logika filtrování
+    query = base_query
     if mode_filter:
         query = query.filter(PuttSession.mode == mode_filter)
         
-    # 3. Aplikace filtru podle Časového Období (period)
     start_date = None
     if period_filter == '7':
-        # Filtrace za posledních 7 dní
         start_date = datetime.now() - timedelta(days=7)
     elif period_filter == '30':
-        # Filtrace za posledních 30 dní
         start_date = datetime.now() - timedelta(days=30)
         
     if start_date:
-        # Filtrujeme sessions, které jsou novější než start_date
-        query = query.filter(PuttSession.date >= start_date) 
-        
-    # 4. Získání dat pro Tabulku Historie
-    # Pro tabulku chceme data seřazená od nejnovějšího
+        query = query.filter(PuttSession.date >= start_date)
+    
+    # ===== TENTO ŘÁDEK CHYBĚL =====
     putt_sessions = query.order_by(desc(PuttSession.date)).all()
+    # ================================
 
-    # 5. Příprava dat pro Graf (Trend skóre)
-    
-    # Pro graf musíme data seřadit chronologicky (od nejstaršího)
-    sessions_for_chart = query.order_by(PuttSession.date).all()
-    
-    chart_labels = [] # Datumy pro osu X
-    chart_scores = [] # Skóre pro osu Y
-    
-    for session in sessions_for_chart:
-        # Zkrácený formát data pro graf
-        chart_labels.append(session.date.strftime('%d.%m.')) 
-        chart_scores.append(session.score)
-        
-    chart_data = {
-        'labels': chart_labels,
-        'scores': chart_scores
-    }
+    # Příprava dat pro graf
+    sessions_with_accuracy = [s for s in putt_sessions if s.accuracy is not None]
+    sessions_for_chart = sorted(sessions_with_accuracy, key=lambda x: x.date)
+    chart_labels = [session.date.strftime('%d.%m.') for session in sessions_for_chart]
+    chart_scores = [session.accuracy for session in sessions_for_chart]
+    chart_data = {'labels': chart_labels, 'scores': chart_scores}
 
-    # 6. Renderování šablony
     return render_template(
         'profile.html', 
         putt_sessions=putt_sessions,
         chart_data=chart_data,
-        
-        # Tyto parametry jsou klíčové, aby po odeslání formuláře
-        # zůstaly vybrané správné hodnoty ve filtrech v HTML.
+        user_stats=user_stats,
+        level_info={'level': level, 'xp_percentage': xp_percentage, 'sessions_to_next': xp_for_next_level - sessions_in_current_level},
         selected_mode=mode_filter, 
         selected_period=period_filter
     )
+
 
 # Seznamy dostupných ID (seeds) pro stabilní avatary
 # Používáme čísla z vaší struktury: static/images/avatar/male/ID.png
@@ -221,43 +242,29 @@ def profile_settings():
         female_avatars=female_avatars
     )
 
+# app.py
+
 @app.route('/user/<username>')
 @login_required
 def user_profile(username):
     user = User.query.filter_by(username=username).first_or_404()
 
-    # === NOVÁ ČÁST PRO FILTROVÁNÍ ===
-    # 1. Načtení filtrů z URL, pokud existují
     mode_filter = request.args.get('mode_filter', '')
     period_filter = request.args.get('period_filter', 'all')
     
-    # 2. Vytvoření základního dotazu na sessions daného uživatele
     query = PuttSession.query.filter_by(user_id=user.id)
     
-    # 3. Aplikace filtru podle herního režimu
-    if mode_filter:
-        query = query.filter(PuttSession.mode == mode_filter)
+    # ... (stejná logika filtrování jako v profile) ...
         
-    # 4. Aplikace filtru podle časového období
-    start_date = None
-    if period_filter == '7':
-        start_date = datetime.now() - timedelta(days=7)
-    elif period_filter == '30':
-        start_date = datetime.now() - timedelta(days=30)
-        
-    if start_date:
-        query = query.filter(PuttSession.date >= start_date)
-    # === KONEC NOVÉ ČÁSTI PRO FILTROVÁNÍ ===
-
-    # Získání dat pro Tabulku Historie (seřazeno od nejnovějšího)
-    # Použijeme náš finální, vyfiltrovaný dotaz 'query'
     putt_sessions = query.order_by(desc(PuttSession.date)).all()
 
-    # Příprava dat pro Graf (seřazeno od nejstaršího)
-    sessions_for_chart = sorted(putt_sessions, key=lambda x: x.date)
+    # --- ZMĚNA ZDE (stejná jako v profile) ---
+    sessions_with_accuracy = [s for s in putt_sessions if s.accuracy is not None]
+    sessions_for_chart = sorted(sessions_with_accuracy, key=lambda x: x.date)
     
     chart_labels = [session.date.strftime('%d.%m.') for session in sessions_for_chart]
-    chart_scores = [session.score for session in sessions_for_chart]
+    chart_scores = [session.accuracy for session in sessions_for_chart]
+    # --- KONEC ZMĚNY ---
         
     chart_data = {
         'labels': chart_labels,
@@ -269,7 +276,6 @@ def user_profile(username):
         user=user, 
         putt_sessions=putt_sessions,
         chart_data=chart_data,
-        # DŮLEŽITÉ: Předáme vybrané hodnoty, aby zůstaly v menu zaškrtnuté
         selected_mode=mode_filter,
         selected_period=period_filter
     )
@@ -347,40 +353,6 @@ def training_putt(mode):
             session['prev_round'] = round_
             session['prev_distance'] = distance
             session['prev_throw_count'] = throw_count
-
-            # --- 3. Zpracování skóre a výpočet nového stavu ---
-
-
-            ###################################tady od semmmmmm
-            # # zpracování tlačítka
-            # if '0' in request.form:
-            #     distance = 5
-            #     # session['jyly_throw_count'] += 5
-            # elif '1' in request.form:
-            #     score += 1 * distance
-            #     distance = 6
-            #     # session['jyly_throw_count'] += 5
-            # elif '2' in request.form:
-            #     score += 2 * distance
-            #     distance = 7
-            #     # session['jyly_throw_count'] += 5
-            # elif '3' in request.form:
-            #     score += 3 * distance
-            #     distance = 8
-            #     # session['jyly_throw_count'] += 5
-            # elif '4' in request.form:
-            #     score += 4 * distance
-            #     distance = 9
-            #     # session['jyly_throw_count'] += 5
-            # elif '5' in request.form:
-            #     score += 5 * distance
-            #     distance = 10
-
-            # if any(key in request.form for key in ['0', '1', '2', '3', '4', '5']):
-            #     round_ += 1
-            #     session['jyly_throw_count'] += 5
-
-            ###################################tady az semmmmmm
 
             rules = {
                 '0': (0, 5), '1': (1, 6), '2': (2, 7),
@@ -632,19 +604,27 @@ def game_over_daily():
             return redirect(url_for('training_putt', mode='daily_putt'))
 
     final_score = session.get('final_score', 0)
-    total_throws = session.get('total_throws', 1) # Mělo by být v session
+    total_throws = session.get('total_throws', 1)
+    
+    # NOVINKA: Načteme si vzdálenost, která byla pro tento trénink nastavena
+    distance = session.get('distance', 0)
 
     # Ukládáme POUZE pokud je 'final_score' v session
     if 'final_score' in session: 
         training_mode = session.get('current_putt_mode', 'daily_putt')
         
+        # NOVINKA: Vypočítáme procenta pro uložení do databáze
+        percentage = (final_score / total_throws) * 100 if total_throws > 0 else 0
+        
         # Ukládání se provede jen tehdy, když je skóre v session
         new_session = PuttSession(
             date=datetime.utcnow(),
             mode=training_mode,
-            score=final_score,                  # Stále ukládáme celkové skóre
-            successful_putts=final_score,       # Pro Daily Putt je počet trefených stejný jako skóre
-            total_putts=total_throws,           # NOVINKA: Uložíme celkový počet hodů
+            score=final_score,
+            successful_putts=final_score,
+            total_putts=total_throws,
+            accuracy=percentage,       # <-- Uložíme vypočítanou úspěšnost
+            distance=distance,         # <-- Uložíme vzdálenost tréninku
             user_id=current_user.id
         )
 
@@ -654,6 +634,7 @@ def game_over_daily():
         # DŮLEŽITÉ: Po uložení skóre smažeme, aby se při dalším refresh/POSTu neuložilo znovu.
         session.pop('final_score', None)
                
+    # Tento výpočet zde můžeme nechat pro zobrazení v šabloně
     percentage = (final_score / total_throws) * 100 if total_throws > 0 else 0
     
     return render_template(
@@ -664,78 +645,68 @@ def game_over_daily():
     )
 
 
+# app.py
+
 @app.route('/game_over', methods=['GET', 'POST'])
 @login_required
 def game_over():
-
     if request.method == "POST":
-
-            # --- 1. Zpracování speciálních tlačítek (Back/Reset) ---
-            
-            if 'newGame' in request.form:
-                session['score'] = 0
-                session['round'] = 1
-                session['distance'] = 10
-                session['prev_score'] = 0 
-                session['prev_round'] = 0
-                session['prev_distance'] = 10
-                session.pop('final_score', None)
-                return redirect(url_for('training_putt', mode='jyly'))
+        if 'newGame' in request.form:
+            # ... (kód pro novou hru zůstává stejný)
+            session.pop('final_score', None)
+            return redirect(url_for('training_putt', mode='jyly'))
 
     final_score = session.get('final_score', 0)
 
-    # Ukládáme POUZE pokud je 'final_score' v session
     if 'final_score' in session: 
         training_mode = session.get('current_putt_mode', 'jyly')
         
-        # 💡 Ukládání se provede jen tehdy, když je skóre v session
+        # NOVINKA: Výpočet úspěšnosti pro JYLY
+        # Maximální skóre v JYLY je 500 (10 kol * 5 hodů * max 10m)
+        accuracy_percentage = (final_score / 500) * 100 if 500 > 0 else 0
+
         new_session = PuttSession(
             date=datetime.utcnow(),
             score=final_score,
             mode=training_mode,
+            accuracy=accuracy_percentage,  # <-- Uložíme vypočítaná procenta
             user_id=current_user.id
         )
-
         db.session.add(new_session)
         db.session.commit()
         
-        # DŮLEŽITÉ: Po uložení skóre smažeme, aby se při dalším refresh/POSTu neuložilo znovu.
         session.pop('final_score', None)
                
-    # 3. Zobrazení stránky (použijeme dříve načtené final_score)
     return render_template("putt/game_over.html", final_score=final_score)
 
-@app.route('/leaderboard')
-def leaderboard():
-    # 1. Definice začátku a konce aktuálního měsíce
+# app.py
+
+# app.py
+
+@app.route('/leaderboard')  # <-- URL je zpět na jednoduché /leaderboard
+@login_required
+def leaderboard():          # <-- Název funkce je zpět na jednoduché leaderboard
     today = datetime.now()
-    # Začátek měsíce (první den v 00:00:00)
     start_of_month = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     
-    # 2. Vytvoření poddotazu pro nalezení nejlepšího skóre pro každého uživatele
-    # Filtr: pouze režim 'jyly' a pouze sessions v aktuálním měsíci
     subquery = (
         db.session.query(
             PuttSession.user_id,
-            func.max(PuttSession.score).label('best_score') # Najdeme MAX skóre
+            func.max(PuttSession.accuracy).label('best_accuracy')
         )
         .filter(PuttSession.mode == 'jyly')
         .filter(PuttSession.date >= start_of_month)
-        # .filter(PuttSession.date < start_of_next_month) # Není nutné, stačí '>=' start_of_month
-        .group_by(PuttSession.user_id) # Seskupíme podle uživatele
+        .group_by(PuttSession.user_id)
         .subquery()
     )
     
-    # 3. Hlavní dotaz: Spojení (JOIN) s tabulkou User a seřazení
-    # Získáme uživatelské jméno a nejlepší skóre
     leaderboard_data = (
-        db.session.query(User, subquery.c.best_score) # <-- ZMĚNA ZDE
+        db.session.query(User, subquery.c.best_accuracy)
         .join(subquery, User.id == subquery.c.user_id)
-        .order_by(desc(subquery.c.best_score))
+        .order_by(desc(subquery.c.best_accuracy))
         .all()
     )
 
-    # Připravíme datum pro zobrazení v šabloně
     current_month_str = start_of_month.strftime('%B %Y')
     
     return render_template(

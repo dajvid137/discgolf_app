@@ -60,8 +60,40 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        scales: { y: { beginAtZero: true } },
-                        plugins: { legend: { display: false } }
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                // Nastavíme maximum osy Y na 100
+                                max: 100, 
+                                ticks: {
+                                    // Přidá "%" za čísla na Y ose
+                                    callback: function(value, index, values) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    // Přidá "%" za hodnotu v tooltipu (když najedete myší)
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.y !== null) {
+                                            // Zaokrouhlíme na 1 desetinné místo
+                                            label += context.parsed.y.toFixed(1) + '%';
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
                     }
                 });
             });
@@ -105,7 +137,16 @@
                     <tr>
                         <td>{{ session.date.strftime('%d.%m. %Y') }}</td>
                         <td>{{ session.mode.replace('_', ' ')|title }}</td>
-                        <td><span class="badge bg-success fs-6">{{ session.score }}</span></td>
+                        <!-- <td><span class="badge bg-success fs-6">{{ session.score }}</span></td> -->
+                         <td>
+                            {# Pokud má session uloženou úspěšnost (accuracy), zobraz ji v procentech #}
+                            {% if session.accuracy is not none %}
+                                <span class="badge bg-success fs-6">{{ "%.1f"|format(session.accuracy) }}%</span>
+                            {# Jinak zobraz staré skóre (pro staré záznamy nebo módy bez procent) #}
+                            {% else %}
+                                <span class="badge bg-success fs-6">{{ session.score }}</span>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

@@ -34,14 +34,20 @@ class User(db.Model, UserMixin):
         from werkzeug.security import check_password_hash
         return check_password_hash(self.password, password)
 
+# models.py
 
 class PuttSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     mode = db.Column(db.String(50), nullable=False)
     score = db.Column(db.Integer, nullable=False)
+    accuracy = db.Column(db.Float, nullable=True)
     successful_putts = db.Column(db.Integer, nullable=True)
     total_putts = db.Column(db.Integer, nullable=True)
+    
+    # TENTO ŘÁDEK PRAVDĚPODOBNĚ CHYBÍ:
+    distance = db.Column(db.Integer, nullable=True)
+    
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 

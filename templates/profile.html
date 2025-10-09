@@ -1,178 +1,151 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="col-md-12">
-        <h2 class="mb-4">
-            Profil uživatele: 
-        </h2>
-        
-        <div class="card shadow-sm mb-5 p-4 d-flex flex-row align-items-center">
-            
-            <div class="me-4">
-                {# 
-                OPRAVA: Zajišťujeme, že výchozí URL je vždy platná cesta k vašemu lokálně uloženému souboru. 
-                Použijeme male/12.png jako výchozí, pokud current_user.profile_image_url neexistuje.
-                #}
-                {% set default_url = url_for('static', filename='images/avatar/male/12.png') %}
-                {% set avatar_url = current_user.profile_image_url or default_url %}
+<style>
+    .stat-card .icon { font-size: 1.75rem; }
+</style>
 
-                <img src="{{ avatar_url }}" 
-                    alt="Avatar uživatele" 
-                    class="rounded-circle border border-5 border-primary" 
-                    style="width: 120px; height: 120px; object-fit: cover;">
+<div class="container my-5">
+    <div class="d-flex align-items-center mb-5">
+        {% set avatar_url = current_user.profile_image_url or url_for('static', filename='images/avatar/male/12.png') %}
+        <img src="{{ avatar_url }}" alt="Avatar" class="rounded-circle me-3" style="width: 80px; height: 80px; object-fit: cover;">
+        <div class="flex-grow-1">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-0">{{ current_user.username }}</h1>
+                    <a href="{{ url_for('profile_settings') }}" class="small text-decoration-none">Upravit profil a avatar</a>
+                </div>
+                <span class="badge bg-primary rounded-pill fs-6">Level {{ level_info.level }}</span>
             </div>
+            <div class="progress mt-2" style="height: 10px;" role="progressbar" aria-valuenow="{{ level_info.xp_percentage }}" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-bar" style="width: {{ level_info.xp_percentage }}%;"></div>
+            </div>
+            <small class="text-muted">{{ level_info.sessions_to_next }} tréninků do dalšího levelu</small>
+        </div>
+    </div>
 
-            <div>
-                <p class="text fw-bold">{{ current_user.username }}</p> 
-                <a href="{{ url_for('profile_settings') }}" class="btn btn-sm btn-outline-primary mt-2">
-                    Nastavit avatar
-                </a>
+    <div class="row g-4">
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm position-sticky" style="top: 1.5rem;">
+                <div class="card-header h5">Osobní rekordy</div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div><i class="fa-solid fa-wind text-primary me-2"></i>Nejdelší drive</div>
+                        <span class="fw-bold">{{ user_stats.longest_drive|int }} m</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div><i class="fa-solid fa-trophy text-primary me-2"></i>Nejlepší JYLY</div>
+                        <span class="fw-bold">{{ "%.1f"|format(user_stats.best_jyly_accuracy) }}%</span>
+                    </li>
+                     <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div><i class="fa-solid fa-fire-flame text-warning me-2"></i>Nejdelší série</div>
+                        <span class="fw-bold">{{ user_stats.streak }} dní</span>
+                    </li>
+                </ul>
+                <div class="card-header h5">Souhrnné statistiky</div>
+                 <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div><i class="fa-solid fa-layer-group text-info me-2"></i>Celkem tréninků</div>
+                        <span class="fw-bold">{{ user_stats.total_sessions }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div><i class="fa-solid fa-calendar-check text-success me-2"></i>Průměr Daily Putt</div>
+                        <span class="fw-bold">{{ "%.1f"|format(user_stats.avg_daily_putt_accuracy) }}%</span>
+                    </li>
+                </ul>
             </div>
         </div>
 
-        <h4 class="mb-3">Historie puttování</h4>
-        
-        {#
-        NOVÁ SEKCE PRO GRAF A FILTRY ZDE
-        ----------------------------------
-        #}
-        
-        <div class="card shadow-sm mb-4 p-4">
-            <!-- <h4 class="mb-3">Analýza a filtry</h4> -->
-
-            {# Místo pro GRAF (vyžaduje Chart.js) #}
-            {# Pro zobrazení grafu musíte do šablony předat data a připojit Chart.js #}
-            <!-- <h5 class="mb-3">Vývoj skóre v čase 📈</h5> -->
-            <canvas id="scoreTrendChart" style="max-height: 250px;"></canvas>
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h4 class="card-title mb-3">Vývoj úspěšnosti</h4>
+                    <div style="height: 250px;"><canvas id="scoreTrendChart"></canvas></div>
+                    <hr>
+                    <form method="GET" action="{{ url_for('profile') }}" class="d-flex flex-wrap align-items-center gap-3">
+                        <label for="mode_filter" class="form-label mb-0">Režim:</label>
+                        <select name="mode_filter" id="mode_filter" class="form-select w-auto">
+                            <option value="">Všechny</option>
+                            <option value="jyly" {% if selected_mode == 'jyly' %}selected{% endif %}>Jyly</option>
+                            <option value="daily_putt" {% if selected_mode == 'daily_putt' %}selected{% endif %}>Daily Putt</option>
+                        </select>
+                        <label for="period_filter" class="form-label mb-0">Období:</label>
+                        <select name="period_filter" id="period_filter" class="form-select w-auto">
+                            <option value="all" {% if selected_period == 'all' %}selected{% endif %}>Celá historie</option>
+                            <option value="30" {% if selected_period == '30' %}selected{% endif %}>Posledních 30 dní</option>
+                            <option value="7" {% if selected_period == '7' %}selected{% endif %}>Posledních 7 dní</option>
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-primary">Filtrovat</button>
+                    </form>
+                </div>
+            </div>
             
-            {# ZDE PŘICHÁZÍ NOVÁ, ROBUSTNĚJŠÍ VERZE JS KÓDU #}
-            <script>
-                // Spustí kód až PO plném načtení DOM (včetně canvasu)
-                document.addEventListener('DOMContentLoaded', function() {
-                    
-                    // 1. Bezpečné načtení dat
-                    // Předpokládá se, že 'chart_data' je předáno z Flasku (app.py)
-                    const chartDataRaw = '{{ chart_data | tojson | safe }}';
-                    
-                    if (chartDataRaw === '{}' || !chartDataRaw) {
-                        console.log("Žádná data pro vykreslení grafu.");
-                        return;
-                    }
-                    
-                    const chartData = JSON.parse(chartDataRaw);
-
-                    // 2. Vykreslení grafu
-                    const ctx = document.getElementById('scoreTrendChart');
-                    
-                    // Bezpečnostní kontrola, zda bylo nalezeno plátno (canvas)
-                    if (!ctx) {
-                        console.error("Chyba: Element s ID 'scoreTrendChart' nebyl nalezen.");
-                        return;
-                    }
-
-                    new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: chartData.labels,
-                            datasets: [{
-                                label: 'Skóre za session',
-                                data: chartData.scores,
-                                borderColor: 'rgba(0, 123, 255, 1)',
-                                backgroundColor: 'rgba(0, 123, 255, 0.2)',
-                                fill: true,
-                                tension: 0.4
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    beginAtZero: true
-                                }
-                            },
-                            plugins: {
-                                legend: {
-                                    display: false
-                                }
-                            }
-                        }
-                    });
-                }); // Konec posluchače DOMContentLoaded
-            </script>
-            {# KONEC JS KÓDU #}
-
-
-            <hr class="my-4">
-
-            {# FORMULÁŘ PRO FILTROVÁNÍ (GET) #}
-            <form method="GET" action="{{ url_for('profile') }}" class="d-flex flex-wrap align-items-center gap-3">
-                
-                <label for="mode_filter" class="form-label mb-0">Režim:</label>
-                <select name="mode_filter" id="mode_filter" class="form-select w-auto">
-                    <option value="">Všechny</option>
-                    <option value="jyly" {% if request.args.get('mode_filter') == 'jyly' %}selected{% endif %}>Jyly</option>
-                    <option value="puttovacka" {% if request.args.get('mode_filter') == 'puttovacka' %}selected{% endif %}>Puttovačka</option>
-                    <option value="random" {% if request.args.get('mode_filter') == 'random' %}selected{% endif %}>Náhodné vzdálenosti</option>
-                    <option value="daily_putt" {% if request.args.get('mode_filter') == 'daily_putt' %}selected{% endif %}>Daily Putt</option>
-                    <option value="survival" {% if request.args.get('mode_filter') == 'survival' %}selected{% endif %}>Survival</option>
-                </select>
-                
-                <label for="period_filter" class="form-label mb-0">Období:</label>
-                <select name="period_filter" id="period_filter" class="form-select w-auto">
-                    <option value="all">Celá historie</option>
-                    <option value="30" {% if request.args.get('period_filter') == '30' %}selected{% endif %}>Posledních 30 dní</option>
-                    <option value="7" {% if request.args.get('period_filter') == '7' %}selected{% endif %}>Posledních 7 dní</option>
-                </select>
-                
-                <button type="submit" class="btn btn-sm btn-primary">Filtrovat</button>
-            </form>
+            <h3 class="mb-3">Historie tréninků</h3>
+            {% if putt_sessions %}
+                <div class="table-responsive">
+                    <table class="table table-hover bg-white rounded shadow-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col">Datum</th>
+                                <th scope="col">Režim</th>
+                                <th scope="col" class="text-end">Úspěšnost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for session in putt_sessions %}
+                            <tr>
+                                <td>{{ session.date.strftime('%d.%m.%Y') }}</td>
+                                <td>{{ session.mode.replace('_', ' ')|title }}</td>
+                                <td class="text-end">
+                                    {% if session.accuracy is not none %}
+                                        <span class="badge bg-success fs-6">{{ "%.1f"|format(session.accuracy) }}%</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary fs-6">{{ session.score }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info">Zatím nemáš žádné záznamy o puttování.</div>
+            {% endif %}
         </div>
-        
-        {# ---------------------------------- #}
-        
-        {% if putt_sessions %}
-            <div class="table-responsive">
-                <table class="table table-striped table-hover shadow-sm rounded">
-                    <thead class="bg-light">
-                        <tr>
-                            <th scope="col">Datum</th>
-                            <th scope="col">Režim</th>
-                            <th scope="col">Skóre</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for session in putt_sessions %}
-                        <tr>
-                            <td>{{ session.date.strftime('%d.%m. %Y') }}</td>
-                            <td>
-                                {% if session.mode == 'jyly' %}
-                                    Jyly
-                                {% elif session.mode == 'puttovacka' %}
-                                    Puttovačka
-                                {% elif session.mode == 'random' %}
-                                    Náhodné vzdálenosti
-                                {% elif session.mode == 'daily_putt' %}
-                                    Daily Putt
-                                {% elif session.mode == 'survival' %}
-                                    Survival
-                                {% else %}
-                                    Neznámý
-                                {% endif %}
-                            </td>
-                            <td><span class="badge bg-success fs-6">{{ session.score }}</span></td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="alert alert-info" role="alert">
-                Zatím nemáš žádné záznamy o puttování. Běž do sekce Trénink a začni!
-            </div>
-        {% endif %}
-
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const chartDataRaw = '{{ chart_data | tojson | safe }}';
+        if (!chartDataRaw || JSON.parse(chartDataRaw).labels.length === 0) { return; }
+        const chartData = JSON.parse(chartDataRaw);
+        const ctx = document.getElementById('scoreTrendChart');
+        if (!ctx) { return; }
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [{
+                    label: 'Úspěšnost',
+                    data: chartData.scores,
+                    borderColor: 'rgba(0, 123, 255, 1)',
+                    backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, max: 100, ticks: { callback: function(value) { return value + '%'; } } } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) { label += ': '; } if (context.parsed.y !== null) { label += context.parsed.y.toFixed(1) + '%'; } return label; } } }
+                }
+            }
+        });
+    });
+</script>
 {% endblock %}
