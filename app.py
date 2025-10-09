@@ -101,6 +101,46 @@ def logout():
 
 # app.py
 
+# app.py
+
+# Nová pomocná funkce pro výpočet levelu
+def calculate_level_info_exponential(total_sessions):
+    """Vypočítá level a XP podle exponenciální křivky."""
+    level = 1
+    # Základní počet tréninků pro postup z levelu 1 na 2
+    sessions_needed = 5.0 
+    # Násobič, který určuje, o kolik % bude každý další level těžší (1.15 = o 15 %)
+    multiplier = 1.15 
+
+    # Uložíme si, kolik tréninků je potřeba na každý level
+    xp_table = {}
+    temp_sessions_needed = sessions_needed
+    for i in range(1, 50): # Vytvoříme tabulku pro prvních 50 levelů
+        xp_table[i] = math.floor(temp_sessions_needed)
+        temp_sessions_needed *= multiplier
+
+    # Zjistíme aktuální level
+    cumulative_sessions = 0
+    for lvl, cost in xp_table.items():
+        if total_sessions >= cumulative_sessions + cost:
+            cumulative_sessions += cost
+            level = lvl + 1
+        else:
+            break
+            
+    sessions_in_current_level = total_sessions - cumulative_sessions
+    sessions_for_next_level = xp_table.get(level, 999)
+
+    xp_percentage = (sessions_in_current_level / sessions_for_next_level) * 100 if sessions_for_next_level > 0 else 0
+    sessions_to_next = sessions_for_next_level - sessions_in_current_level
+
+    return {
+        'level': level, 
+        'xp_percentage': xp_percentage, 
+        'sessions_to_next': sessions_to_next
+    }
+
+
 @app.route('/profile')
 @login_required
 def profile():
@@ -109,7 +149,7 @@ def profile():
     
     base_query = PuttSession.query.filter_by(user_id=current_user.id)
 
-    # --- VÝPOČET STATISTIK ---
+    # --- VÝPOČET STATISTIK (zůstává stejný) ---
     total_sessions = base_query.count()
     best_jyly_accuracy = db.session.query(func.max(PuttSession.accuracy)).filter(
         PuttSession.user_id == current_user.id, 
@@ -139,13 +179,11 @@ def profile():
         'longest_drive': longest_drive
     }
     
-    # Výpočet levelu a XP
-    level = (total_sessions // 5) + 1
-    sessions_in_current_level = total_sessions % 5
-    xp_for_next_level = 5
-    xp_percentage = (sessions_in_current_level / xp_for_next_level) * 100
+    # === ZMĚNA ZDE: POUŽIJEME NOVOU FUNKCI PRO VÝPOČET LEVELU ===
+    level_info = calculate_level_info_exponential(total_sessions)
+    # ==========================================================
     
-    # Logika filtrování
+    # Logika filtrování (zůstává stejná)
     query = base_query
     if mode_filter:
         query = query.filter(PuttSession.mode == mode_filter)
@@ -159,11 +197,9 @@ def profile():
     if start_date:
         query = query.filter(PuttSession.date >= start_date)
     
-    # ===== TENTO ŘÁDEK CHYBĚL =====
     putt_sessions = query.order_by(desc(PuttSession.date)).all()
-    # ================================
 
-    # Příprava dat pro graf
+    # Příprava dat pro graf (zůstává stejná)
     sessions_with_accuracy = [s for s in putt_sessions if s.accuracy is not None]
     sessions_for_chart = sorted(sessions_with_accuracy, key=lambda x: x.date)
     chart_labels = [session.date.strftime('%d.%m.') for session in sessions_for_chart]
@@ -175,7 +211,7 @@ def profile():
         putt_sessions=putt_sessions,
         chart_data=chart_data,
         user_stats=user_stats,
-        level_info={'level': level, 'xp_percentage': xp_percentage, 'sessions_to_next': xp_for_next_level - sessions_in_current_level},
+        level_info=level_info, # <-- Nová data se předají do šablony
         selected_mode=mode_filter, 
         selected_period=period_filter
     )
