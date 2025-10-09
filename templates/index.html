@@ -1,43 +1,64 @@
-<!-- templates/index.html -->
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-5 text-center">
-    <h1>Chainify</h1>
-    <p>Trénuj puttování, drivy a sleduj svůj pokrok!</p>
-    
-    <div class="mt-4">
-        <a href="{{ url_for('register') }}" class="btn btn-success btn-lg me-2">Registrovat</a>
-        <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">Přihlásit se</a>
+<style>
+    .feature-clean i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: var(--bs-primary);
+    }
+    .testimonial {
+        background-color: #f8f9fa;
+        border-left: 5px solid var(--bs-primary);
+    }
+</style>
+
+<div class="container my-5">
+    <div class="text-center py-5">
+        <h1 class="display-2 fw-light">Trénuj chytřeji.</h1>
+        <h1 class="display-4 fw-bold mb-4">Ne jen víc.</h1>
+        <p class="lead text-muted mx-auto" style="max-width: 600px;">Chainify je jednoduchý nástroj pro sledování tvého discgolfového pokroku. Přidej se a začni zlepšovat svou hru ještě dnes.</p>
+        <div class="mt-4">
+            {% if not current_user.is_authenticated %}
+            <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg px-5">Vytvořit účet zdarma</a>
+            {% else %}
+            <a href="{{ url_for('training') }}" class="btn btn-success btn-lg px-5">Přejít na trénink</a>
+            {% endif %}
+        </div>
     </div>
 
-    <div class="container mt-5">
-    <h4 class="mb-4 text-center">Pravidla tréninkových režimů</h4>
+    <div class="row text-center my-5 py-5">
+        <div class="col-md-3 feature-clean">
+            <i class="fa-solid fa-trophy"></i>
+            <h5>Herní módy</h5>
+            <p class="text-muted small">Strukturované tréninky jako JYLY a Daily Putt.</p>
+        </div>
+        <div class="col-md-3 feature-clean">
+            <i class="fa-solid fa-chart-line"></i>
+            <h5>Detailní statistiky</h5>
+            <p class="text-muted small">Sleduj svůj vývoj v čase pomocí interaktivních grafů.</p>
+        </div>
+        <div class="col-md-3 feature-clean">
+            <i class="fa-solid fa-users"></i>
+            <h5>Měsíční žebříčky</h5>
+            <p class="text-muted small">Poměř své dovednosti s ostatními hráči v komunitě.</p>
+        </div>
+        <div class="col-md-3 feature-clean">
+            <i class="fa-solid fa-mobile-screen-button"></i>
+            <h5>Přístup odkudkoliv</h5>
+            <p class="text-muted small">Aplikace je plně responzivní pro trénink na hřišti.</p>
+        </div>
+    </div>
 
-    <ul class="list-group list-group-flush mt-4">
-        
-        <li class="list-group-item">
-            **Pravidla pro JYLY:** <p class="text-muted small mb-0">
-                Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Nullam sapien sem, ornare ac, nonummy non, lobortis a enim. Nam sed tellus id magna elementum tincidunt.
-            </p>
-        </li>
-        
-        <li class="list-group-item">
-            **Pravidla pro Puttovačku:**
-            <p class="text-muted small mb-0">
-                Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Duis aute irure dolor in reprehenderit in voluptate velit esse.
-            </p>
-        </li>
-        
-        <li class="list-group-item">
-            **Pravidla pro Náhodné vzdálenosti (Random):**
-            <p class="text-muted small mb-0">
-                Velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-            </p>
-        </li>
-    </ul>
-
-</div>
-
+    <div class="p-4 rounded-3 testimonial mx-auto" style="max-width: 800px;">
+        <figure class="mb-0">
+            <blockquote class="blockquote">
+                <p>"Díky přehledným statistikám jsem konečně zjistil, kde dělám chyby. Moje puttování se za měsíc zlepšilo o 20 %!"</p>
+            </blockquote>
+            <figcaption class="blockquote-footer mb-0">
+                David, spokojený uživatel
+            </figcaption>
+        </figure>
+    </div>
 </div>
 {% endblock %}

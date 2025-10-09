@@ -484,8 +484,8 @@ def training_putt(mode):
                     discs = int(request.form.get('discs', 0))
                     
                     # 1. Validace rozsahů
-                    if not (100 <= total_putts <= 300 and 5 <= distance <= 10 and 1 <= discs <= 10):
-                        flash('Neplatné nastavení. Zkontrolujte rozsahy (Putts: 10-300, Vzdálenost: 5-10m, Disků: 1-10).', 'danger')
+                    if not (50 <= total_putts <= 300 and 5 <= distance <= 10 and 1 <= discs <= 10):
+                        flash('Neplatné nastavení. Zkontrolujte rozsahy (Putts: 50-300, Vzdálenost: 5-10m, Disků: 1-10).', 'danger')
                         return render_template(SETUP_TEMPLATE)
                     
                     total_rounds = int(math.ceil(total_putts / discs))

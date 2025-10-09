@@ -1,24 +1,24 @@
-{# templates/putt/daily_putt_game.html #}
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-5 text-center">
-    <h1 class="mb-4 text-primary fw-bold">Daily Putt</h1>
+<div class="container mt-4 text-center" style="max-width: 500px;">
+    <h1 class="card-title text-primary mb-4">
+        <i class="fa-solid fa-calendar-check"></i> Daily Putt
+    </h1>
 
-    <div class="card text-center shadow-sm p-4 mb-3" style="border-left: 5px solid #3B82F6;">
-        <h2 class="card-title text-primary">Kolo: {{ Hround }}/{{ Htotal_rounds }}</h2>
-        <h4 class="card-subtitle mb-2 text-muted">Vzdálenost: {{ Hdistance }}m</h4>
-        <!-- <h3 class="card-text mt-3 fw-bold">Skóre: {{ Hscore }} ({{ "%.1f"|format(current_percentage) }}%)</h3> -->
-        <h3 class="card-text mt-3 fw-bold">
-        Skóre: {{ Hscore }}
-        <span class="text-muted fw-normal">|</span>
-        <span class="text-primary">{{ "%.1f"|format(current_percentage) }}%</span>
-    </h3>
+    <div class="card text-center shadow-sm p-3 mb-3" style="border-left: 5px solid #3B82F6;">
+        <h2 class="card-title text-primary h4">Kolo: {{ Hround }}/{{ Htotal_rounds }}</h2>
+        <h4 class="card-subtitle mb-2 text-muted h6">Vzdálenost: {{ Hdistance }}m</h4>
+        <h3 class="card-text mt-2 fw-bold h5">
+            Skóre: {{ Hscore }}
+            <span class="text-muted fw-normal">|</span>
+            <span class="text-primary">{{ "%.1f"|format(current_percentage) }}%</span>
+        </h3>
     </div>
 
-    <div class="container mt-4 mb-4">
-        <h4>Celkový pokrok</h4> 
-        <div class="progress" style="height: 20px;">
+    <div class="container mb-3 px-0">
+        <h4 class="h6 text-muted">Celkový pokrok</h4> 
+        <div class="progress" style="height: 15px;">
             <div class="progress-bar bg-primary" role="progressbar" 
                 style="{{ progress_style_attr }}" 
                 aria-valuenow="{{ progress_percentage|int }}" 
@@ -29,35 +29,36 @@
         </div>
     </div>
 
-
     <form method="POST" action="{{ url_for('training_putt', mode='daily_putt') }}">
-        <div class="container text-center">
-            
-            <!-- <h4 class="mb-3">Kolik disků jsi trefil v tomto kole?</h4> -->
-            
-            <div class="d-flex flex-wrap justify-content-center gap-2 mb-4">
-                {# Tlačítka pro počet trefených disků #}
-                {% for i in range(Hdiscs + 1) %}
-                    <button type="submit" name="hits" value="{{ i }}" 
-                            class="btn btn-outline-success btn-lg" 
-                            style="min-width: 60px;">
-                        {{ i }}
-                    </button>
-                {% endfor %}
-            </div>
+        <div class="card p-3 shadow-sm">
+            <div class="card-body p-2">
+                <h5 class="card-title mb-3">Kolik disků jsi trefil?</h5>
 
-            <div class="row justify-content-center mt-4">
-                <div class="col-6 col-sm-3 col-md-2">
-                    <button type="submit" name="back" class="btn btn-secondary w-100 mb-2">Zpět</button>
+                <div class="row g-2 justify-content-center">
+                    {# Tlačítka se automaticky seřadí do sloupců po 4 (3 na řádek) #}
+                    {% for i in range(Hdiscs + 1) %}
+                        <div class="col-4">
+                            <button type="submit" name="hits" value="{{ i }}" 
+                                    class="btn btn-outline-primary btn-lg w-100">
+                                {{ i }}
+                            </button>
+                        </div>
+                    {% endfor %}
                 </div>
-                <div class="col-6 col-sm-3 col-md-2">
-                    <button type="submit" name="resBtn" class="btn btn-secondary w-100 mb-2" 
-                            onclick="return confirm('Opravdu chcete restartovat trénink a vrátit se na nastavení?');">
-                        Resetovat
-                    </button>
+                <hr class="my-3">
+
+                <div class="row g-2 justify-content-center">
+                    <div class="col-6">
+                        <button type="submit" name="back" class="btn btn-secondary w-100">Smazat</button>
+                    </div>
+                    <div class="col-6">
+                        <button type="submit" name="resBtn" class="btn btn-danger w-100" 
+                                onclick="return confirm('Opravdu chcete restartovat trénink?');">
+                            Resetovat
+                        </button>
+                    </div>
                 </div>
             </div>
-
         </div>
     </form>
 </div>
