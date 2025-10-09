@@ -3,62 +3,91 @@
 {% block content %}
 <style>
     .feature-clean i {
-        font-size: 3rem;
+        font-size: 2.5rem; /* Mírně menší ikony */
         margin-bottom: 1rem;
         color: var(--bs-primary);
+        transition: transform 0.2s ease-in-out;
+    }
+    .feature-clean:hover i {
+        transform: scale(1.1);
     }
     .testimonial {
         background-color: #f8f9fa;
-        border-left: 5px solid var(--bs-primary);
+        border-left: 4px solid var(--bs-primary);
+        padding: 2rem;
+        border-radius: .5rem;
     }
 </style>
 
 <div class="container my-5">
-    <div class="text-center py-5">
-        <h1 class="display-2 fw-light">Trénuj chytřeji.</h1>
-        <h1 class="display-4 fw-bold mb-4">Ne jen víc.</h1>
-        <p class="lead text-muted mx-auto" style="max-width: 600px;">Chainify je jednoduchý nástroj pro sledování tvého discgolfového pokroku. Přidej se a začni zlepšovat svou hru ještě dnes.</p>
-        <div class="mt-4">
+    <div class="text-center py-5 my-md-3">
+        <h1 class="display-5 fw-bold mb-4">Trénuj chytře.</h1>
+        <p class="lead text-muted mx-auto" style="max-width: 600px;">Chainify je jednoduchý nástroj pro sledování tvého discgolfového pokroku.</p>
+        <div class="mt-5">
             {% if not current_user.is_authenticated %}
-            <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg px-5">Vytvořit účet zdarma</a>
+                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg px-5 py-3 shadow">Vytvořit účet</a>
+                <p class="mt-3 text-muted">
+                    Už máte účet? <a href="{{ url_for('login') }}" class="fw-bold text-decoration-none">Přihlaste se</a>
+                </p>
             {% else %}
-            <a href="{{ url_for('training') }}" class="btn btn-success btn-lg px-5">Přejít na trénink</a>
+                <a href="{{ url_for('training') }}" class="btn btn-success btn-lg px-5 py-3 shadow">Přejít na trénink</a>
             {% endif %}
         </div>
     </div>
 
-    <div class="row text-center my-5 py-5">
+    <div class="row text-center my-5 py-4">
         <div class="col-md-3 feature-clean">
             <i class="fa-solid fa-trophy"></i>
-            <h5>Herní módy</h5>
-            <p class="text-muted small">Strukturované tréninky jako JYLY a Daily Putt.</p>
+            <h5 class="fw-semibold">Herní módy</h5>
+            <p class="text-muted small">Strukturované tréninky jako JYLY a Daily Putt pro měřitelný pokrok.</p>
         </div>
         <div class="col-md-3 feature-clean">
             <i class="fa-solid fa-chart-line"></i>
-            <h5>Detailní statistiky</h5>
-            <p class="text-muted small">Sleduj svůj vývoj v čase pomocí interaktivních grafů.</p>
+            <h5 class="fw-semibold">Detailní statistiky</h5>
+            <p class="text-muted small">Sleduj svůj vývoj v čase pomocí interaktivních grafů a historie.</p>
         </div>
         <div class="col-md-3 feature-clean">
             <i class="fa-solid fa-users"></i>
-            <h5>Měsíční žebříčky</h5>
+            <h5 class="fw-semibold">Měsíční žebříčky</h5>
             <p class="text-muted small">Poměř své dovednosti s ostatními hráči v komunitě.</p>
         </div>
         <div class="col-md-3 feature-clean">
             <i class="fa-solid fa-mobile-screen-button"></i>
-            <h5>Přístup odkudkoliv</h5>
-            <p class="text-muted small">Aplikace je plně responzivní pro trénink na hřišti.</p>
+            <h5 class="fw-semibold">Přístup odkudkoliv</h5>
+            <p class="text-muted small">Aplikace je plně responzivní pro trénink přímo na hřišti.</p>
         </div>
     </div>
+    
+    <hr class="my-5">
 
-    <div class="p-4 rounded-3 testimonial mx-auto" style="max-width: 800px;">
-        <figure class="mb-0">
-            <blockquote class="blockquote">
-                <p>"Díky přehledným statistikám jsem konečně zjistil, kde dělám chyby. Moje puttování se za měsíc zlepšilo o 20 %!"</p>
-            </blockquote>
-            <figcaption class="blockquote-footer mb-0">
-                David, spokojený uživatel
-            </figcaption>
-        </figure>
+    <div class="my-5">
+        <h2 class="text-center mb-4">Pravidla Herních Módů</h2>
+        <div class="accordion mx-auto" id="rulesAccordion" style="max-width: 800px;">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingJyly">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseJyly" aria-expanded="false" aria-controls="collapseJyly">
+                        <strong>Pravidla pro JYLY</strong>
+                    </button>
+                </h2>
+                <div id="collapseJyly" class="accordion-collapse collapse" aria-labelledby="headingJyly" data-bs-parent="#rulesAccordion">
+                    <div class="accordion-body">
+                        Hraje se na 10 kol. V každém kole házíš 5 puttů z určené vzdálenosti. Za každý trefený putt se ti přičte skóre rovné aktuální vzdálenosti v metrech. Vzdálenost pro další kolo se určuje podle počtu trefených puttů v aktuálním kole (0 tref = 5m, 1 trefa = 6m, ..., 5 tref = 10m). Cílem je nahrát co nejvyšší celkové skóre.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingDaily">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDaily" aria-expanded="false" aria-controls="collapseDaily">
+                        <strong>Pravidla pro Daily Putt</strong>
+                    </button>
+                </h2>
+                <div id="collapseDaily" class="accordion-collapse collapse" aria-labelledby="headingDaily" data-bs-parent="#rulesAccordion">
+                    <div class="accordion-body">
+                        Tento mód je zaměřen na konzistenci a objem. Na začátku si nastavíš svůj denní cíl: celkový počet puttů (např. 100), vzdálenost a počet disků, které máš k dispozici na jedno kolo. Aplikace sleduje, kolik puttů jsi trefil z celkového počtu, a tvým hlavním ukazatelem je procentuální úspěšnost. Ideální pro budování svalové paměti.
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+    </div>
 {% endblock %}

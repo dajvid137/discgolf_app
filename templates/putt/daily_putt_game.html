@@ -36,7 +36,7 @@
 
                 <div class="row g-2 justify-content-center">
                     {# Tlačítka se automaticky seřadí do sloupců po 4 (3 na řádek) #}
-                    {% for i in range(Hdiscs + 1) %}
+                    {% for i in range(Hdiscs + 1) | reverse %}
                         <div class="col-4">
                             <button type="submit" name="hits" value="{{ i }}" 
                                     class="btn btn-outline-primary btn-lg w-100">
