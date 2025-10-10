@@ -2,7 +2,7 @@
 from flask import Flask, render_template, redirect, url_for, request, session, flash
 from models import db, User, PuttSession, Drive
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from sqlalchemy import desc, func
 import random
 import math
@@ -22,12 +22,6 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
-
-# def md5_filter(s):
-#     """Vrací MD5 hash řetězce, potřebný pro Gravatar."""
-#     return hashlib.md5(s.encode('utf-8')).hexdigest()
-
-# app.jinja_env.filters['md5'] = md5_filter # <-- REGISTRACE FILTRU
 
 score = 0
 round = 0
@@ -97,11 +91,29 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
-# app.py
+def update_streak(user):
+    """Aktualizuje tréninkovou sérii pro daného uživatele."""
+    today = date.today()
+    
+    # Pokud uživatel ještě nikdy netrénoval
+    if user.last_training_date is None:
+        user.current_streak = 1
+        user.last_training_date = today
+        return
 
-# app.py
+    # Pokud poslední trénink už byl dnes, nic se nemění
+    if user.last_training_date == today:
+        return
 
-# app.py
+    # Pokud poslední trénink byl včera, navýšíme sérii
+    yesterday = today - timedelta(days=1)
+    if user.last_training_date == yesterday:
+        user.current_streak += 1
+        user.last_training_date = today
+    else:
+        # Pokud byla pauza delší než jeden den, sérii resetujeme na 1
+        user.current_streak = 1
+        user.last_training_date = today
 
 # Nová pomocná funkce pro výpočet levelu
 def calculate_level_info_exponential(total_sessions):
@@ -149,8 +161,10 @@ def profile():
     
     base_query = PuttSession.query.filter_by(user_id=current_user.id)
 
-    # --- VÝPOČET STATISTIK (zůstává stejný) ---
+    # --- VÝPOČET STATISTIK ---
+    # 1. ZDE SE VYTVOŘÍ `total_sessions`
     total_sessions = base_query.count()
+    
     best_jyly_accuracy = db.session.query(func.max(PuttSession.accuracy)).filter(
         PuttSession.user_id == current_user.id, 
         PuttSession.mode == 'jyly'
@@ -179,11 +193,10 @@ def profile():
         'longest_drive': longest_drive
     }
     
-    # === ZMĚNA ZDE: POUŽIJEME NOVOU FUNKCI PRO VÝPOČET LEVELU ===
+    # 2. ZDE SE `total_sessions` POUŽIJE (už existuje)
     level_info = calculate_level_info_exponential(total_sessions)
-    # ==========================================================
     
-    # Logika filtrování (zůstává stejná)
+    # Logika filtrování
     query = base_query
     if mode_filter:
         query = query.filter(PuttSession.mode == mode_filter)
@@ -199,7 +212,7 @@ def profile():
     
     putt_sessions = query.order_by(desc(PuttSession.date)).all()
 
-    # Příprava dat pro graf (zůstává stejná)
+    # Příprava dat pro graf
     sessions_with_accuracy = [s for s in putt_sessions if s.accuracy is not None]
     sessions_for_chart = sorted(sessions_with_accuracy, key=lambda x: x.date)
     chart_labels = [session.date.strftime('%d.%m.') for session in sessions_for_chart]
@@ -211,7 +224,7 @@ def profile():
         putt_sessions=putt_sessions,
         chart_data=chart_data,
         user_stats=user_stats,
-        level_info=level_info, # <-- Nová data se předají do šablony
+        level_info=level_info,
         selected_mode=mode_filter, 
         selected_period=period_filter
     )
@@ -665,6 +678,7 @@ def game_over_daily():
         )
 
         db.session.add(new_session)
+        update_streak(current_user)
         db.session.commit()
         
         # DŮLEŽITÉ: Po uložení skóre smažeme, aby se při dalším refresh/POSTu neuložilo znovu.
@@ -709,6 +723,7 @@ def game_over():
             user_id=current_user.id
         )
         db.session.add(new_session)
+        update_streak(current_user)
         db.session.commit()
         
         session.pop('final_score', None)
