@@ -92,6 +92,8 @@ def login():
 @login_required
 def logout():
     logout_user()
+    session.clear() # <-- KLÍČOVÝ ŘÁDEK: Smaže všechna data (herní stav atd.) ze session
+    flash('Byl jsi úspěšně odhlášen.', 'success') # Přidáme zprávu pro uživatele
     return redirect(url_for('index'))
 
 def update_streak(user):
