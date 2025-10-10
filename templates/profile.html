@@ -89,6 +89,7 @@
                             <tr>
                                 <th scope="col">Datum</th>
                                 <th scope="col">Režim</th>
+                                <th scope="col" class="text-center">Vzd.</th>
                                 <th scope="col" class="text-end">Úspěšnost</th>
                             </tr>
                         </thead>
@@ -97,6 +98,16 @@
                             <tr>
                                 <td>{{ session.date.strftime('%d.%m.%Y') }}</td>
                                 <td>{{ session.mode.replace('_', ' ')|title }}</td>
+                                
+                                <td class="text-center">
+                                    {# Zobraz vzdálenost jen pro Daily Putt #}
+                                    {% if session.mode == 'daily_putt' and session.distance %}
+                                        {{ session.distance }}m
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
                                 <td class="text-end">
                                     {% if session.accuracy is not none %}
                                         <span class="badge bg-success fs-6">{{ "%.1f"|format(session.accuracy) }}%</span>
