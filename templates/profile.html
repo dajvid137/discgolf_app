@@ -69,6 +69,7 @@
                             <option value="">Všechny</option>
                             <option value="jyly" {% if selected_mode == 'jyly' %}selected{% endif %}>Jyly</option>
                             <option value="daily_putt" {% if selected_mode == 'daily_putt' %}selected{% endif %}>Daily Putt</option>
+                            <option value="survival" {% if selected_mode == 'survival' %}selected{% endif %}>Survival</option>
                         </select>
                         <label for="period_filter" class="form-label mb-0">Období:</label>
                         <select name="period_filter" id="period_filter" class="form-select w-auto">
@@ -106,11 +107,27 @@
                                     {% endif %}
                                 </td>
                                 <td class="text-end">
-                                    {% if session.accuracy is not none %}
-                                        <span class="badge bg-success fs-6">{{ "%.1f"|format(session.accuracy) }}%</span>
+                                    {# Nastavíme barvu odznaku podle herního módu #}
+                                    {% if session.mode == 'jyly' %}
+                                        {% set badge_color = 'bg-primary' %}
+                                    {% elif session.mode == 'daily_putt' %}
+                                        {% set badge_color = 'bg-success' %}
+                                    {% elif session.mode == 'survival' %}
+                                        {% set badge_color = 'bg-danger' %} {# Červená pro Survival #}
                                     {% else %}
-                                        <span class="badge bg-secondary fs-6">{{ session.score }}</span>
+                                        {% set badge_color = 'bg-secondary' %}
                                     {% endif %}
+
+                                    {# Zobrazíme výsledek se správnou jednotkou #}
+                                    <span class="badge {{ badge_color }} fs-6">
+                                        {% if session.mode == 'survival' %}
+                                            {{ session.score|int }} m  {# Pro Survival zobrazíme skóre v metrech #}
+                                        {% elif session.accuracy is not none %}
+                                            {{ "%.1f"|format(session.accuracy) }}% {# Pro ostatní s 'accuracy' zobrazíme procenta #}
+                                        {% else %}
+                                            {{ session.score }} {# Pro staré záznamy bez 'accuracy' #}
+                                        {% endif %}
+                                    </span>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -149,37 +166,6 @@
             </nav>
             {% endif %}
         </div>
-
-        <!-- <div class="col-lg-4">
-            <div class="card shadow-sm position-sticky" style="top: 1.5rem;">
-                <div class="card-header h5">Osobní rekordy</div>
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div><i class="fa-solid fa-wind text-primary me-2"></i>Nejdelší dolet</div>
-                        <span class="fw-bold">{{ user_stats.longest_drive|int }} m</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div><i class="fa-solid fa-trophy text-primary me-2"></i>Nejlepší JYLY</div>
-                        <span class="fw-bold">{{ "%.1f"|format(user_stats.best_jyly_accuracy) }}%</span>
-                    </li>
-                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div><i class="fa-solid fa-fire text-warning me-2"></i>Nejdelší série</div>
-                        <span class="fw-bold">{{ user_stats.streak }} dní</span>
-                    </li>
-                </ul>
-                <div class="card-header h5">Souhrnné statistiky</div>
-                 <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div><i class="fa-solid fa-layer-group text-info me-2"></i>Celkem tréninků</div>
-                        <span class="fw-bold">{{ user_stats.total_sessions }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div><i class="fa-solid fa-calendar-check text-success me-2"></i>Průměr Daily Putt</div>
-                        <span class="fw-bold">{{ "%.1f"|format(user_stats.avg_daily_putt_accuracy) }}%</span>
-                    </li>
-                </ul>
-            </div>
-        </div> -->
     </div>
 </div>
 
@@ -198,11 +184,48 @@
                 fill: true, tension: 0.4
             }] },
             options: {
-                responsive: true, maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true, max: 100, ticks: { callback: function(value) { return value + '%'; } } } },
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        // MAXimum už nenastavujeme, škála bude dynamická
+                        ticks: {
+                            // Přidáme správnou jednotku (%) nebo (m)
+                            callback: function(value) {
+                                // Získáme aktivní mód z proměnné od Flasku
+                                const mode = "{{ selected_mode }}";
+                                if (mode === 'survival') {
+                                    return value + ' m';
+                                }
+                                // Pro JYLY, Daily Putt a ostatní procentuální
+                                return value + ' %';
+                            }
+                        }
+                    }
+                },
                 plugins: {
                     legend: { display: false },
-                    tooltip: { callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) { label += ': '; } if (context.parsed.y !== null) { label += context.parsed.y.toFixed(1) + '%'; } return label; } } }
+                    tooltip: {
+                        callbacks: {
+                            // Přidáme správnou jednotku i do tooltipu
+                            label: function(context) {
+                                let label = context.dataset.label || 'Výkon';
+                                const mode = "{{ selected_mode }}";
+                                let value = context.parsed.y;
+
+                                if (value !== null) {
+                                    label += ': ';
+                                    if (mode === 'survival') {
+                                        label += value.toFixed(0) + ' m';
+                                    } else {
+                                        label += value.toFixed(1) + ' %';
+                                    }
+                                }
+                                return label;
+                            }
+                        }
+                    }
                 }
             }
         });

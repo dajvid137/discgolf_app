@@ -159,6 +159,8 @@ def calculate_level_info_exponential(total_sessions):
     }
 
 
+# app.py
+
 @app.route('/profile')
 @login_required
 def profile():
@@ -169,6 +171,7 @@ def profile():
     
     base_query = PuttSession.query.filter_by(user_id=current_user.id)
 
+    # --- KOMPLETNÍ VÝPOČET STATISTIK ---
     total_sessions = base_query.count()
     best_jyly_accuracy = db.session.query(func.max(PuttSession.accuracy)).filter(
         PuttSession.user_id == current_user.id, 
@@ -189,17 +192,25 @@ def profile():
     longest_drive = db.session.query(func.max(Drive.distance)).filter(
         Drive.user_id == current_user.id
     ).scalar() or 0.0
-    
+        
+    best_survival_score = db.session.query(func.max(PuttSession.score)).filter(
+        PuttSession.user_id == current_user.id,
+        PuttSession.mode == 'survival'
+    ).scalar() or 0
+
     user_stats = {
         'total_sessions': total_sessions,
         'best_jyly_accuracy': best_jyly_accuracy,
         'avg_daily_putt_accuracy': avg_daily_putt_accuracy,
         'streak': current_user.current_streak,
-        'longest_drive': longest_drive
+        'longest_drive': longest_drive,
+        'best_survival_score': best_survival_score
     }
     
     level_info = calculate_level_info_exponential(total_sessions)
+    # --- KONEC VÝPOČTU STATISTIK ---
     
+    # Logika filtrování
     query = base_query
     if mode_filter:
         query = query.filter(PuttSession.mode == mode_filter)
@@ -213,16 +224,18 @@ def profile():
     if start_date:
         query = query.filter(PuttSession.date >= start_date)
     
-    pagination = query.order_by(desc(PuttSession.date)).paginate(
-        page=page, per_page=SESSIONS_PER_PAGE, error_out=False
-    )
-    putt_sessions = pagination.items
-
+    # Příprava dat pro graf
     all_filtered_sessions = query.order_by(PuttSession.date).all()
     sessions_with_accuracy = [s for s in all_filtered_sessions if s.accuracy is not None]
     chart_labels = [session.date.strftime('%d.%m.') for session in sessions_with_accuracy]
     chart_scores = [session.accuracy for session in sessions_with_accuracy]
     chart_data = {'labels': chart_labels, 'scores': chart_scores}
+
+    # Příprava dat pro tabulku
+    pagination = query.order_by(desc(PuttSession.date)).paginate(
+        page=page, per_page=SESSIONS_PER_PAGE, error_out=False
+    )
+    putt_sessions = pagination.items
 
     return render_template(
         'profile.html', 
@@ -234,7 +247,6 @@ def profile():
         selected_mode=mode_filter, 
         selected_period=period_filter
     )
-
 
 # Seznamy dostupných ID (seeds) pro stabilní avatary
 # Používáme čísla z vaší struktury: static/images/avatar/male/ID.png
@@ -332,13 +344,19 @@ def user_profile(username):
     longest_drive = db.session.query(func.max(Drive.distance)).filter(
         Drive.user_id == user.id
     ).scalar() or 0.0
+
+    best_survival_score = db.session.query(func.max(PuttSession.score)).filter(
+        PuttSession.user_id == user.id, # V profile() zde bude current_user.id
+        PuttSession.mode == 'survival'
+    ).scalar() or 0
     
     user_stats = {
         'total_sessions': total_sessions,
         'best_jyly_accuracy': best_jyly_accuracy,
         'avg_daily_putt_accuracy': avg_daily_putt_accuracy,
-        'streak': user.current_streak,
-        'longest_drive': longest_drive
+        'streak': user.current_streak, # V profile() zde bude current_user.current_streak
+        'longest_drive': longest_drive,
+        'best_survival_score': best_survival_score # <-- Přidáno
     }
     
     level_info = calculate_level_info_exponential(total_sessions)
@@ -534,7 +552,75 @@ def training_putt(mode):
             progress_style_attr=progress_style_attr
         )
     # ***************************** Daily putt zde
-# app.py (nahraďte CELOU existující sekci 'elif mode == 'daily_putt':' touto verzí)
+
+    elif mode == 'survival':
+        session['current_putt_mode'] = mode
+        template = 'putt/survival.html'
+
+        if 'survival_game' not in session:
+            session['survival_game'] = {
+                'lives': 0,
+                'distance': 3,
+                'round': 1,
+                'max_distance': 3,
+                'is_first_attempt_at_distance': True,
+                'previous_state': None
+            }
+
+        game_state = session['survival_game']
+
+        if request.method == "POST":
+            # --- ZMĚNA ZDE: NEJPRVE ZPRACOVAT ZPĚT A RESET ---
+            if 'back' in request.form and game_state.get('previous_state'):
+                session['survival_game'] = game_state['previous_state']
+                return redirect(url_for('training_putt', mode='survival'))
+            
+            elif 'resBtn' in request.form:
+                session.pop('survival_game', None)
+                return redirect(url_for('training_putt', mode='survival'))
+            # ---------------------------------------------
+
+            if 'hits' in request.form:
+                # --- ZMĚNA ZDE: ULOŽENÍ STAVU AŽ TADY ---
+                # Uložíme si kopii aktuálního stavu PŘEDTÍM, než ho změníme
+                game_state['previous_state'] = game_state.copy()
+                # ---------------------------------------
+                
+                hits = int(request.form.get('hits'))
+                is_first_attempt = game_state['is_first_attempt_at_distance']
+                game_over = False
+
+                if hits == 3:
+                    if is_first_attempt:
+                        game_state['lives'] += 1
+                    game_state['distance'] += 1
+                    game_state['is_first_attempt_at_distance'] = True
+                    if game_state['distance'] > game_state['max_distance']:
+                        game_state['max_distance'] = game_state['distance']
+                
+                elif hits == 2:
+                    game_state['is_first_attempt_at_distance'] = False
+
+                elif hits == 1:
+                    game_state['lives'] -= 1
+                    game_state['is_first_attempt_at_distance'] = False
+                    if game_state['lives'] < 0:
+                        game_over = True
+
+                elif hits == 0:
+                    game_over = True
+                
+                if not game_over:
+                    game_state['round'] += 1
+                else:
+                    session['final_score'] = game_state['max_distance']
+                    session.pop('survival_game', None)
+                    return redirect(url_for('game_over'))
+            
+            session['survival_game'] = game_state
+            return redirect(url_for('training_putt', mode='survival'))
+
+        return render_template(template, **game_state)
 
     elif mode == 'daily_putt':
         session['current_putt_mode'] = mode
@@ -676,9 +762,6 @@ def training_putt(mode):
     elif mode == 'random':
         template = 'random.html'
 
-    elif mode == 'survival':
-        template = 'survival.html'
-
     else:
         return "Neznámý režim", 404
 
@@ -744,45 +827,40 @@ def game_over_daily():
     )
 
 
-# app.py
-
 @app.route('/game_over', methods=['GET', 'POST'])
 @login_required
 def game_over():
     if request.method == "POST":
         if 'newGame' in request.form:
-            # ... (kód pro novou hru zůstává stejný)
+            last_mode = session.get('current_putt_mode', 'jyly')
             session.pop('final_score', None)
-            return redirect(url_for('training_putt', mode='jyly'))
+            if last_mode == 'jyly':
+                session['score'] = 0; session['round'] = 1; session['distance'] = 10
+                return redirect(url_for('training_putt', mode='jyly'))
+            elif last_mode == 'survival':
+                session.pop('survival_game', None)
+                return redirect(url_for('training_putt', mode='survival'))
+            else:
+                return redirect(url_for('training'))
 
     final_score = session.get('final_score', 0)
 
     if 'final_score' in session: 
-        training_mode = session.get('current_putt_mode', 'jyly')
-        
-        # NOVINKA: Výpočet úspěšnosti pro JYLY
-        # Maximální skóre v JYLY je 500 (10 kol * 5 hodů * max 10m)
-        accuracy_percentage = (final_score / 500) * 100 if 500 > 0 else 0
+        training_mode = session.get('current_putt_mode', 'unknown')
+        session_data = {'score': final_score, 'mode': training_mode, 'user_id': current_user.id}
 
-        new_session = PuttSession(
-            date=datetime.utcnow(),
-            score=final_score,
-            mode=training_mode,
-            accuracy=accuracy_percentage,  # <-- Uložíme vypočítaná procenta
-            user_id=current_user.id
-        )
+        if training_mode == 'jyly':
+            session_data['accuracy'] = (final_score / 500) * 100 if 500 > 0 else 0
+        elif training_mode == 'survival':
+            session_data['accuracy'] = final_score
+
+        new_session = PuttSession(**session_data)
         db.session.add(new_session)
         update_streak(current_user)
         db.session.commit()
-        
         session.pop('final_score', None)
                
     return render_template("putt/game_over.html", final_score=final_score)
-
-# app.py
-
-# app.py
-
 @app.route('/leaderboard')  # <-- URL je zpět na jednoduché /leaderboard
 @login_required
 def leaderboard():          # <-- Název funkce je zpět na jednoduché leaderboard
