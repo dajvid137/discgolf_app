@@ -1,6 +1,7 @@
 # app.py
 from flask import Flask, render_template, redirect, url_for, request, session, flash
 from models import db, User, PuttSession, Drive
+from forms import ChangeAccountInfoForm
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from datetime import datetime, timedelta, date
 from sqlalchemy import desc, func
@@ -294,6 +295,7 @@ def profile_settings():
         'profile_settings.html', 
         male_avatars=male_avatars, 
         female_avatars=female_avatars
+        
     )
 
 # app.py

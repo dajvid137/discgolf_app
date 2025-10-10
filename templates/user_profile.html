@@ -25,7 +25,7 @@
                 <div class="card-header h5">Osobní rekordy</div>
                 <ul class="list-group list-group-flush">
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div><i class="fa-solid fa-wind text-primary me-2"></i>Nejdelší dolet</div>
+                        <div><i class="fa-solid fa-wind text-primary me-2"></i>Nejdelší drive</div>
                         <span class="fw-bold">{{ user_stats.longest_drive|int }} m</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -33,7 +33,7 @@
                         <span class="fw-bold">{{ "%.1f"|format(user_stats.best_jyly_accuracy) }}%</span>
                     </li>
                      <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div><i class="fa-solid fa-fire text-warning me-2"></i>Nejdelší série</div>
+                        <div><i class="fa-solid fa-fire text-warning me-2"></i></div>
                         <span class="fw-bold">{{ user_stats.streak }} dní</span>
                     </li>
                 </ul>
