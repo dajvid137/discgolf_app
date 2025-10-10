@@ -9,6 +9,9 @@ import math
 import os
 
 app = Flask(__name__)
+
+app.jinja_env.add_extension('jinja2.ext.do')
+
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_secret_key_for_dev')
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///discgolf.db'
 DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///discgolf.db')
@@ -158,13 +161,12 @@ def calculate_level_info_exponential(total_sessions):
 def profile():
     mode_filter = request.args.get('mode_filter', '')
     period_filter = request.args.get('period_filter', 'all')
+    page = request.args.get('page', 1, type=int)
+    SESSIONS_PER_PAGE = 15
     
     base_query = PuttSession.query.filter_by(user_id=current_user.id)
 
-    # --- VÝPOČET STATISTIK ---
-    # 1. ZDE SE VYTVOŘÍ `total_sessions`
     total_sessions = base_query.count()
-    
     best_jyly_accuracy = db.session.query(func.max(PuttSession.accuracy)).filter(
         PuttSession.user_id == current_user.id, 
         PuttSession.mode == 'jyly'
@@ -193,10 +195,8 @@ def profile():
         'longest_drive': longest_drive
     }
     
-    # 2. ZDE SE `total_sessions` POUŽIJE (už existuje)
     level_info = calculate_level_info_exponential(total_sessions)
     
-    # Logika filtrování
     query = base_query
     if mode_filter:
         query = query.filter(PuttSession.mode == mode_filter)
@@ -210,18 +210,21 @@ def profile():
     if start_date:
         query = query.filter(PuttSession.date >= start_date)
     
-    putt_sessions = query.order_by(desc(PuttSession.date)).all()
+    pagination = query.order_by(desc(PuttSession.date)).paginate(
+        page=page, per_page=SESSIONS_PER_PAGE, error_out=False
+    )
+    putt_sessions = pagination.items
 
-    # Příprava dat pro graf
-    sessions_with_accuracy = [s for s in putt_sessions if s.accuracy is not None]
-    sessions_for_chart = sorted(sessions_with_accuracy, key=lambda x: x.date)
-    chart_labels = [session.date.strftime('%d.%m.') for session in sessions_for_chart]
-    chart_scores = [session.accuracy for session in sessions_for_chart]
+    all_filtered_sessions = query.order_by(PuttSession.date).all()
+    sessions_with_accuracy = [s for s in all_filtered_sessions if s.accuracy is not None]
+    chart_labels = [session.date.strftime('%d.%m.') for session in sessions_with_accuracy]
+    chart_scores = [session.accuracy for session in sessions_with_accuracy]
     chart_data = {'labels': chart_labels, 'scores': chart_scores}
 
     return render_template(
         'profile.html', 
         putt_sessions=putt_sessions,
+        pagination=pagination,
         chart_data=chart_data,
         user_stats=user_stats,
         level_info=level_info,
@@ -296,17 +299,15 @@ def profile_settings():
 @app.route('/user/<username>')
 @login_required
 def user_profile(username):
-    # Najdeme uživatele podle jména
     user = User.query.filter_by(username=username).first_or_404()
-
-    # --- ZDE PŘIDÁME STEJNOU LOGIKU JAKO V PROFILE ---
+    
     mode_filter = request.args.get('mode_filter', '')
     period_filter = request.args.get('period_filter', 'all')
-    
-    # Dotazy se nyní filtrují podle ID nalezeného 'user', ne 'current_user'
-    base_query = PuttSession.query.filter_by(user_id=user.id)
+    page = request.args.get('page', 1, type=int)
+    SESSIONS_PER_PAGE = 15
 
-    # Výpočet statistik
+    base_query = PuttSession.query.filter_by(user_id=user.id)
+    
     total_sessions = base_query.count()
     best_jyly_accuracy = db.session.query(func.max(PuttSession.accuracy)).filter(
         PuttSession.user_id == user.id, 
@@ -332,32 +333,41 @@ def user_profile(username):
         'total_sessions': total_sessions,
         'best_jyly_accuracy': best_jyly_accuracy,
         'avg_daily_putt_accuracy': avg_daily_putt_accuracy,
-        'streak': user.current_streak, # Použijeme streak daného uživatele
+        'streak': user.current_streak,
         'longest_drive': longest_drive
     }
     
-    # Výpočet levelu a XP
     level_info = calculate_level_info_exponential(total_sessions)
     
-    # Logika filtrování
     query = base_query
     if mode_filter:
         query = query.filter(PuttSession.mode == mode_filter)
-    # ... atd. ...
-    
-    putt_sessions = query.order_by(desc(PuttSession.date)).all()
+        
+    start_date = None
+    if period_filter == '7':
+        start_date = datetime.now() - timedelta(days=7)
+    elif period_filter == '30':
+        start_date = datetime.now() - timedelta(days=30)
+        
+    if start_date:
+        query = query.filter(PuttSession.date >= start_date)
 
-    # Příprava dat pro graf
-    sessions_with_accuracy = [s for s in putt_sessions if s.accuracy is not None]
-    sessions_for_chart = sorted(sessions_with_accuracy, key=lambda x: x.date)
-    chart_labels = [session.date.strftime('%d.%m.') for session in sessions_for_chart]
-    chart_scores = [session.accuracy for session in sessions_for_chart]
+    pagination = query.order_by(desc(PuttSession.date)).paginate(
+        page=page, per_page=SESSIONS_PER_PAGE, error_out=False
+    )
+    putt_sessions = pagination.items
+
+    all_filtered_sessions = query.order_by(PuttSession.date).all()
+    sessions_with_accuracy = [s for s in all_filtered_sessions if s.accuracy is not None]
+    chart_labels = [session.date.strftime('%d.%m.') for session in sessions_with_accuracy]
+    chart_scores = [session.accuracy for session in sessions_with_accuracy]
     chart_data = {'labels': chart_labels, 'scores': chart_scores}
 
     return render_template(
         'user_profile.html', 
-        user=user, # Předáváme nalezeného uživatele
+        user=user,
         putt_sessions=putt_sessions,
+        pagination=pagination,
         chart_data=chart_data,
         user_stats=user_stats,
         level_info=level_info,

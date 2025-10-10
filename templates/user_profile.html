@@ -15,19 +15,6 @@
         <p class="h5 text-primary fw-semibold">
             <i class="fa-solid fa-star me-1"></i> Level {{ level_info.level }}
         </p>
-
-        <!-- <hr class="my-3 mx-auto" style="width: 50%;"> -->
-
-        <!-- <div class="d-flex justify-content-center gap-4 text-muted">
-            <div data-bs-toggle="tooltip" title="Nejdelší tréninková série">
-                <i class="fa-solid fa-fire text-warning me-1"></i>
-                Série: <strong>{{ user_stats.streak }} dní</strong>
-            </div>
-            <div data-bs-toggle="tooltip" title="Nejlepší dosažená úspěšnost v módu JYLY">
-                <i class="fa-solid fa-trophy text-primary me-1"></i>
-                Nejlepší JYLY: <strong>{{ "%.1f"|format(user_stats.best_jyly_accuracy) }}%</strong>
-            </div>
-        </div> -->
     </div>
 </div>
 
@@ -38,7 +25,7 @@
                 <div class="card-header h5">Osobní rekordy</div>
                 <ul class="list-group list-group-flush">
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div><i class="fa-solid fa-wind text-primary me-2"></i>Nejdelší drive</div>
+                        <div><i class="fa-solid fa-wind text-primary me-2"></i>Nejdelší dolet</div>
                         <span class="fw-bold">{{ user_stats.longest_drive|int }} m</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -127,7 +114,65 @@
             {% else %}
                 <div class="alert alert-info">Tento uživatel zatím nemá žádné záznamy o puttování.</div>
             {% endif %}
+
+            {% if pagination and pagination.pages > 1 %}
+<nav aria-label="Navigace stránek historie">
+    <ul class="pagination justify-content-center mt-4">
+        {% set url_args = request.args.copy() %}
+        {% do url_args.pop('page', None) %}
+
+        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('user_profile', username=user.username, page=pagination.prev_num, **url_args) }}">Předchozí</a>
+        </li>
+        {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+                {% if p == pagination.page %}
+                    <li class="page-item active" aria-current="page"><span class="page-link">{{ p }}</span></li>
+                {% else %}
+                    <li class="page-item"><a class="page-link" href="{{ url_for('user_profile', username=user.username, page=p, **url_args) }}">{{ p }}</a></li>
+                {% endif %}
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+        {% endfor %}
+        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('user_profile', username=user.username, page=pagination.next_num, **url_args) }}">Další</a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
         </div>
+
+        <!-- <div class="col-lg-4">
+            <div class="card shadow-sm position-sticky" style="top: 1.5rem;">
+                <div class="card-header h5">Osobní rekordy</div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div><i class="fa-solid fa-wind text-primary me-2"></i>Nejdelší dolet</div>
+                        <span class="fw-bold">{{ user_stats.longest_drive|int }} m</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div><i class="fa-solid fa-trophy text-primary me-2"></i>Nejlepší JYLY</div>
+                        <span class="fw-bold">{{ "%.1f"|format(user_stats.best_jyly_accuracy) }}%</span>
+                    </li>
+                     <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div><i class="fa-solid fa-fire text-warning me-2"></i>Nejdelší série</div>
+                        <span class="fw-bold">{{ user_stats.streak }} dní</span>
+                    </li>
+                </ul>
+                <div class="card-header h5">Souhrnné statistiky</div>
+                 <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div><i class="fa-solid fa-layer-group text-info me-2"></i>Celkem tréninků</div>
+                        <span class="fw-bold">{{ user_stats.total_sessions }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div><i class="fa-solid fa-calendar-check text-success me-2"></i>Průměr Daily Putt</div>
+                        <span class="fw-bold">{{ "%.1f"|format(user_stats.avg_daily_putt_accuracy) }}%</span>
+                    </li>
+                </ul>
+            </div>
+        </div> -->
     </div>
 </div>
 
@@ -140,20 +185,13 @@
         if (!ctx) { return; }
         new Chart(ctx, {
             type: 'line',
-            data: {
-                labels: chartData.labels,
-                datasets: [{
-                    label: 'Úspěšnost',
-                    data: chartData.scores,
-                    borderColor: 'rgba(0, 123, 255, 1)',
-                    backgroundColor: 'rgba(0, 123, 255, 0.2)',
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
+            data: { labels: chartData.labels, datasets: [{
+                label: 'Úspěšnost', data: chartData.scores,
+                borderColor: 'rgba(0, 123, 255, 1)', backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                fill: true, tension: 0.4
+            }] },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 scales: { y: { beginAtZero: true, max: 100, ticks: { callback: function(value) { return value + '%'; } } } },
                 plugins: {
                     legend: { display: false },
